@@ -19,5 +19,14 @@
     "start": "node dist-deploy/server.js",
     "package": "npm run build && node scripts/package-deploy.mjs",
     "verify:deploy": "node scripts/verify-deploy.mjs"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/node": "^26.6.6",
+    "adm-zip": "^0.6.1",
+    "concurrently": "^10.0.7",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }
