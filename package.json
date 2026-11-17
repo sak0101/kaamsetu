@@ -1,0 +1,23 @@
+{
+  "name": "kaamsetu-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KaamSetu: hyperlocal marketplace for short-term manual work (development monorepo; the deployable app is generated into dist-deploy/).",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"npm run dev -w @kaamsetu/web\" \"npm run dev -w @kaamsetu/api\"",
+    "build": "npm run build -w @kaamsetu/web && npm run build -w @kaamsetu/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "stage": "npm run build && node scripts/package-deploy.mjs --no-zip",
+    "start": "node dist-deploy/server.js",
+    "package": "npm run build && node scripts/package-deploy.mjs",
+    "verify:deploy": "node scripts/verify-deploy.mjs"
+  }
+}
