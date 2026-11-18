@@ -36,8 +36,10 @@ try {
 // directory does not exist and static serving is skipped; Vite serves the SPA.
 const app = createApp({ staticDir: path.resolve(__dirname, "public"), deps, publicConfig });
 
-const server = app.listen(port, () => {
-  console.log(`[kaamsetu] Listening on port ${port} (NODE_ENV=${process.env.NODE_ENV ?? "unset"})`);
+// GoDaddy Node.js Hosting requires an explicit IPv4 wildcard bind on process.env.PORT.
+const HOST = "0.0.0.0";
+const server = app.listen(port, HOST, () => {
+  console.log(`[kaamsetu] Listening on ${HOST}, port ${port} (NODE_ENV=${process.env.NODE_ENV ?? "unset"})`);
 });
 
 server.on("error", (err) => {

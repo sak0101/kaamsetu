@@ -124,6 +124,8 @@ try {
   }
   record(`npm start binds process.env.PORT (${port})`, up && log.includes(`port ${port}`), log.trim().split("\n").pop());
 
+  record("npm start binds explicitly to 0.0.0.0", log.includes("Listening on 0.0.0.0"), "server log reports the 0.0.0.0 bind");
+
   if (up) {
     const health = await (await fetch(`${base}/api/health`)).json();
     record("GET /api/health returns { ok: true }", health.ok === true);
