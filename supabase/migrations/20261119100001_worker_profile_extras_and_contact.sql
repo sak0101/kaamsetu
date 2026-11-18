@@ -198,6 +198,14 @@ end $$;
 -- ---------------------------------------------------------------------------
 -- Grants (same model as migration 10)
 -- ---------------------------------------------------------------------------
+-- New functions get default EXECUTE; start from nothing (as migration 10 does), then grant exactly what is needed.
+revoke all on function
+  public.save_worker_profile(uuid, text, smallint, smallint, boolean, smallint[], text[], text),
+  public.save_contact(uuid, text),
+  public.get_applicant_signals(uuid, uuid),
+  private.skills_valid(text[]),
+  private.has_active_booking_with(uuid)
+  from public, anon, authenticated, service_role;
 grant select on public.contact_details to authenticated;
 grant execute on function private.has_active_booking_with(uuid) to authenticated;
 grant execute on function
