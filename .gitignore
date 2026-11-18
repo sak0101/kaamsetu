@@ -37,3 +37,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Browser E2E output
+apps/web/e2e/out/

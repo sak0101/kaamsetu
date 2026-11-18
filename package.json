@@ -26,6 +26,7 @@
     "adm-zip": "^0.6.1",
     "concurrently": "^10.0.7",
     "esbuild": "^0.28.2",
+    "supabase": "^2.122.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

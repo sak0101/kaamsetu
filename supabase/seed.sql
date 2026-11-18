@@ -1,0 +1,9 @@
+-- KaamSetu seed.
+--
+-- Intentionally empty. Reference data (work categories, Vadodara localities)
+-- lives in migration 20261118120004_reference_data.sql so it is applied to the
+-- hosted project by `supabase db push` as well (seed.sql is local-only).
+--
+-- Demo accounts are NOT seeded here: they are created with pre-confirmed emails
+-- through the Supabase Auth admin API by a script that reads credentials from
+-- environment variables, so no passwords ever enter version control.

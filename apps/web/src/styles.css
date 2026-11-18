@@ -1,56 +1,68 @@
-:root {
-  --indigo: #243b53;
-  --cream: #ede5d5;
-  --terracotta: #d97745;
-  --terracotta-dark: #b85c2e;
-  --marigold: #d9a441;
+@import "tailwindcss";
+
+/*
+ * KaamSetu design tokens.
+ * Brand: terracotta #D97745, deep indigo #243B53, marigold #D9A441, warm cream #EDE5D5.
+ *
+ * Contrast notes (WCAG AA, measured against the colours below):
+ *   - ink on cream ............ ~9.2:1   (body text)
+ *   - ink-soft on cream ....... ~4.9:1   (secondary text)
+ *   - white on terracotta-dark  ~4.6:1   (primary buttons; the raw terracotta is only ~3.1:1 with white,
+ *                                         so it is used for accents, borders and large display text)
+ *   - ink on marigold ......... ~5.1:1   (badges, highlights)
+ */
+@theme {
+  --color-terracotta: #d97745;
+  --color-terracotta-dark: #b85c2e;
+  --color-terracotta-darker: #9c4a22;
+  --color-ink: #243b53;
+  --color-ink-soft: #486581;
+  --color-marigold: #d9a441;
+  --color-cream: #ede5d5;
+  --color-paper: #fbf8f1;
+  --color-line: #d8ccb6;
+  --color-success: #1f6b3a;
+  --color-success-bg: #e3f1e7;
+  --color-danger: #a12d2d;
+  --color-danger-dark: #7f2222;
+  --color-danger-bg: #f8e4e2;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--cream);
-  color: var(--indigo);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-size: 1.0625rem;
-  line-height: 1.5;
-}
-
-.page {
-  max-width: 32rem;
-  margin: 0 auto;
-  padding: 3rem 1.25rem;
-}
-
-h1 {
-  margin: 0 0 0.25rem;
-  font-size: 2.25rem;
-  border-bottom: 4px solid var(--terracotta);
-  display: inline-block;
-}
-
-.pill {
-  display: inline-block;
-  margin: 0.5rem 0;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  font-weight: 600;
-  background: #fff;
-  border: 2px solid var(--indigo);
-}
-
-.pill-ok {
-  border-color: #1f6b3a;
-}
-
-.pill-down {
-  border-color: var(--terracotta-dark);
-}
-
-.note {
-  font-size: 0.9375rem;
-  opacity: 0.85;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    margin: 0;
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  h1,
+  h2,
+  h3 {
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  /* Visible keyboard focus everywhere. */
+  :focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .on-dark :focus-visible {
+    outline-color: var(--color-marigold);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
 }

@@ -73,20 +73,39 @@ try {
     !["vite", "typescript", "esbuild", "react"].some((d) => installed.includes(d)),
     `${installed.length} packages`);
 
+  // Dummy, non-functional placeholders: enough for the server to boot and serve
+  // /api/health. They point at a reserved .invalid host and are never real credentials.
+  const PLACEHOLDER_SUPABASE = {
+    SUPABASE_URL: "https://placeholder.invalid",
+    SUPABASE_ANON_KEY: "placeholder-anon",
+    SUPABASE_SERVICE_ROLE_KEY: "placeholder-service",
+  };
+  // Never inherit real Supabase settings from the developer's shell.
+  const cleanEnv = { ...process.env, SUPABASE_URL: "", SUPABASE_ANON_KEY: "", SUPABASE_SERVICE_ROLE_KEY: "" };
+
   // Production start without PORT must fail loudly
   const noPort = spawn("node", ["server.js"], {
     cwd: tmp,
-    env: { ...process.env, NODE_ENV: "production", PORT: "" },
+    env: { ...cleanEnv, ...PLACEHOLDER_SUPABASE, NODE_ENV: "production", PORT: "" },
     stdio: "pipe",
   });
   const noPortCode = await new Promise((resolve) => noPort.on("exit", resolve));
   record("production start without PORT exits non-zero", noPortCode !== 0, `exit ${noPortCode}`);
 
+  // Production start without Supabase settings must fail loudly (never guess)
+  const noSb = spawn("node", ["server.js"], {
+    cwd: tmp,
+    env: { ...cleanEnv, NODE_ENV: "production", PORT: String(await freePort()) },
+    stdio: "pipe",
+  });
+  const noSbCode = await new Promise((resolve) => noSb.on("exit", resolve));
+  record("production start without Supabase settings exits non-zero", noSbCode !== 0, `exit ${noSbCode}`);
+
   // Real start via `npm start` on a random port
   const port = await freePort();
   child = spawn("npm", ["start"], {
     cwd: tmp,
-    env: { ...process.env, NODE_ENV: "production", PORT: String(port) },
+    env: { ...cleanEnv, ...PLACEHOLDER_SUPABASE, NODE_ENV: "production", PORT: String(port) },
     stdio: "pipe",
     shell: isWin,
   });
