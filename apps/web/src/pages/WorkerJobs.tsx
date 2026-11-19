@@ -101,6 +101,10 @@ export function WorkerJobs() {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const requestId = useRef(0);
+  // Bumped by "Show these jobs" so confirming always runs a fresh query, even when the
+  // server-side filters (type of work, locality) happen to equal the current ones.
+  const [searchRun, setSearchRun] = useState(0);
+  const [searching, setSearching] = useState(false);
 
   // "Ask in your own words": spoken or typed, interpreted, shown back for the worker to edit and confirm.
   const [question, setQuestion] = useState("");
@@ -122,11 +126,15 @@ export function WorkerJobs() {
         setJobs((prev) => (replace ? res.jobs : [...prev, ...res.jobs]));
         setHasMore(res.jobs.length === PAGE_SIZE);
       } catch (err) {
-        if (id === requestId.current) setError(err);
+        if (id === requestId.current) {
+          setError(err);
+          if (replace) setJobs([]); // never leave results from an older search under a failed one
+        }
       } finally {
         if (id === requestId.current) {
           setLoading(false);
           setLoadingMore(false);
+          setSearching(false);
         }
       }
     },
@@ -135,7 +143,7 @@ export function WorkerJobs() {
 
   useEffect(() => {
     void load(0, true);
-  }, [load, version]);
+  }, [load, version, searchRun]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -175,6 +183,8 @@ export function WorkerJobs() {
     setLocalityId(reading.localityId);
     setDateFilter(reading.date);
     setSearch(reading.keywords);
+    setSearching(true); // hide the old list and show the loader until the new results arrive
+    setSearchRun((n) => n + 1);
     setReading(null);
   }
 
@@ -260,7 +270,7 @@ export function WorkerJobs() {
         </div>
       </form>
 
-      {loading && jobs.length === 0 ? (
+      {(loading && jobs.length === 0) || searching ? (
         <LoadingBlock label="Loading jobs…" />
       ) : error && jobs.length === 0 ? (
         <ErrorState error={error} onRetry={() => void load(0, true)} />
