@@ -408,6 +408,27 @@ describe("worker voice and text search", () => {
     expect(screen.getByLabelText("Date", { selector: "#" + (screen.getAllByLabelText("Date").at(-1) as HTMLElement).id })).not.toHaveValue("");
   });
 
+  it("runs a fresh search every time 'Show these jobs' is clicked, even if the filters are unchanged", async () => {
+    const f = installFetch({
+      ...baseRoutes("worker"),
+      "GET /api/jobs": { json: { jobs: [sofa, wedding], page: { limit: 20, offset: 0 } } },
+      "GET /api/me/bookings": { json: { bookings: [] } },
+      "GET /api/me/applications": { json: { applications: [] } },
+    });
+    renderApp("/worker");
+    const user = userEvent.setup();
+    await screen.findByRole("link", { name: "Shift household goods" });
+    for (let i = 0; i < 2; i++) {
+      await user.clear(screen.getByLabelText("What are you looking for?"));
+      await user.type(screen.getByLabelText("What are you looking for?"), "cleaning jobs near Gotri");
+      await user.click(screen.getByRole("button", { name: "Understand my request" }));
+      const group = await screen.findByRole("group", { name: "What I understood" });
+      const before = f.callsTo("GET /api/jobs").length;
+      await user.click(within(group).getByRole("button", { name: "Show these jobs" }));
+      await waitFor(() => expect(f.callsTo("GET /api/jobs").length).toBeGreaterThan(before));
+    }
+  });
+
   it("says so honestly when it couldn't understand, instead of guessing", async () => {
     installFetch({ ...baseRoutes("worker"), "GET /api/jobs": { json: { jobs: [sofa], page: { limit: 20, offset: 0 } } }, "GET /api/me/bookings": { json: { bookings: [] } }, "GET /api/me/applications": { json: { applications: [] } } });
     renderApp("/worker");
