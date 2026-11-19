@@ -301,8 +301,14 @@ function createContactRouter(mailer2) {
     try {
       await mailer2.send({ name: body.name, email: body.email, message: body.message });
     } catch (err) {
-      console.error(`[kaamsetu] contact mail failed: ${err.code ?? err?.name ?? "unknown"}`);
-      throw new ApiError(502, "contact_failed", "We couldn't send your message. Please email us directly.");
+      const e = err ?? {};
+      const pick = (v) => typeof v === "string" || typeof v === "number" ? String(v).slice(0, 60) : "-";
+      console.error(
+        `[kaamsetu] contact mail failed: code=${pick(e.code ?? e.name)} syscall=${pick(e.syscall)} address=${pick(e.address)} port=${pick(e.port)} command=${pick(e.command)} responseCode=${pick(e.responseCode)}`
+      );
+      const code = typeof e.code === "string" ? e.code : "";
+      const status = /TIMEDOUT|TIMEOUT/.test(code) ? 504 : /^(ESOCKET|ECONNECTION|ECONNREFUSED|ECONNRESET|EDNS|ENOTFOUND|EHOSTUNREACH|ENETUNREACH)$/.test(code) ? 503 : 502;
+      throw new ApiError(status, "contact_failed", "We couldn't send your message. Please email us directly.");
     }
     res.status(202).json({ ok: true });
   });
