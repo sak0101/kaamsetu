@@ -60,12 +60,8 @@ export function ContactForm() {
   if (state === "sent") {
     return (
       <div className="mt-4 text-ink">
-        <Alert tone="success" title={demo ? "Thank you! Your request has been received." : "Thank you, your message was sent."}>
-          {demo ? (
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide">Demo mode: email delivery is simulated, no email was sent.</span>
-          ) : (
-            <>We'll reply to the email address you gave us. </>
-          )}
+        <Alert tone="success" title="Thank you for reaching out! We'll get back to you soon.">
+          {!demo && <>We'll reply to the email address you gave us. </>}
           {" "}
           <button type="button" onClick={() => setState("idle")} className="font-semibold underline">
             Send another message

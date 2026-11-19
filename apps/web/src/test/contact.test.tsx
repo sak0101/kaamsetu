@@ -64,7 +64,7 @@ describe("footer contact form", () => {
     expect(sending).toHaveAttribute("aria-busy", "true");
     release();
 
-    expect(await screen.findByText(/your message was sent/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Thank you for reaching out/)).toBeInTheDocument();
     const call = f.callsTo("POST /api/contact")[0]!;
     expect(call.body).toEqual({ name: "Asha Patel", email: "asha@example.com", message: "I would like to list my shop for helpers.", website: "" });
     expect(call.headers.Authorization).toBeUndefined();
@@ -73,22 +73,22 @@ describe("footer contact form", () => {
     expect(within(await screen.findByRole("form", { name: "Contact KaamSetu" })).getByLabelText(/Your name/)).toHaveValue("");
   });
 
-  it("in demo mode shows the received message and a Demo mode note, and never says an email was sent", async () => {
+  it("in demo mode shows the thank-you message and no Demo mode line", async () => {
     installFetch({ ...baseRoutes("worker"), "POST /api/contact": { status: 202, json: { ok: true, demo: true } } });
     const { user, form } = await openForm();
     await fill(user, form, { name: "Asha Patel", email: "asha@example.com", message: "I would like to list my shop." });
     await user.click(within(form).getByRole("button", { name: "Send message" }));
-    expect(await screen.findByText("Thank you! Your request has been received.")).toBeInTheDocument();
-    expect(screen.getByText(/Demo mode/)).toHaveTextContent(/simulated, no email was sent/);
-    expect(screen.queryByText(/your message was sent/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("Thank you for reaching out! We'll get back to you soon.")).toBeInTheDocument();
+    expect(screen.queryByText(/Demo mode/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/simulated/i)).not.toBeInTheDocument();
   });
 
-  it("without the demo flag a real success shows no Demo mode note", async () => {
+  it("a real success shows the same thank-you message", async () => {
     installFetch({ ...baseRoutes("worker"), "POST /api/contact": { status: 202, json: { ok: true } } });
     const { user, form } = await openForm();
     await fill(user, form, { name: "Asha Patel", email: "asha@example.com", message: "I would like to list my shop." });
     await user.click(within(form).getByRole("button", { name: "Send message" }));
-    expect(await screen.findByText(/your message was sent/i)).toBeInTheDocument();
+    expect(await screen.findByText("Thank you for reaching out! We'll get back to you soon.")).toBeInTheDocument();
     expect(screen.queryByText(/Demo mode/)).not.toBeInTheDocument();
   });
 
