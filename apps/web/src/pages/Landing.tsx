@@ -3,7 +3,7 @@ import { APP_TAGLINE } from "@kaamsetu/shared";
 import { Link } from "react-router-dom";
 import { CategoryImage } from "../components/CategoryImage";
 import { homeFor } from "../components/Layout";
-import { ButtonLink } from "../components/ui";
+import { Badge, ButtonLink } from "../components/ui";
 import { useAuth } from "../lib/auth";
 
 /** Alt text describes what the hero photo actually shows (see public/images/credits.json). */
@@ -50,31 +50,76 @@ function Steps({ title, steps }: { title: string; steps: string[][] }) {
   );
 }
 
+function SampleListing() {
+  // A sample, clearly labelled as such, built from the same pieces as a real listing card.
+  return (
+    <figure aria-label="Sample job listing" className="w-full">
+      <div className="overflow-hidden rounded-xl border border-line bg-paper text-ink shadow-xl">
+        <div className="flex items-center justify-between gap-2 border-b border-line bg-cream px-4 py-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-terracotta-darker">Illustration · not a real listing</p>
+          <Badge tone="warning">Open</Badge>
+        </div>
+        <div className="p-4">
+          <p className="text-sm font-semibold text-terracotta-darker">Event help · Alkapuri</p>
+          <h2 className="mt-0.5 text-xl">Wedding helpers, Alkapuri</h2>
+          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
+            <div><dt className="text-ink-soft">Pay</dt><dd className="text-lg font-bold">₹800 <span className="text-sm font-semibold text-ink-soft">per worker</span></dd></div>
+            <div><dt className="text-ink-soft">Workers</dt><dd className="font-semibold">3 of 8 booked</dd></div>
+            <div className="col-span-2"><dt className="text-ink-soft">When</dt><dd className="font-semibold">Saturday · 5:00 PM – 12:00 AM IST</dd></div>
+          </dl>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-line" aria-hidden="true">
+            <div className="h-full w-[37%] rounded-full bg-terracotta-dark" />
+          </div>
+          <p className="mt-1 text-xs text-ink-soft">5 places still open</p>
+        </div>
+      </div>
+    </figure>
+  );
+}
+
 function Hero() {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-ink shadow-md">
-      {failed ? (
-        <div aria-hidden="true" className="h-72 w-full bg-gradient-to-br from-terracotta via-marigold to-ink sm:h-96" />
-      ) : (
-        <img src="/images/hero.jpg" alt={HERO_ALT} width={1200} height={800} decoding="async" fetchPriority="high" onError={() => setFailed(true)} className="h-72 w-full object-cover sm:h-96" />
-      )}
-      <p className="absolute left-3 top-3 rounded bg-ink/80 px-2 py-1 text-xs text-white">
-        Photo: porters at a Delhi railway station · <Link to="/credits" className="underline">credit</Link>
-      </p>
-      {/* Illustration only: clearly not a real listing. */}
-      <figure aria-label="Illustration of a job card" className="absolute inset-x-3 bottom-3 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-80">
-        <div className="rounded-xl border-2 border-dashed border-terracotta bg-paper/95 p-4 shadow-lg backdrop-blur">
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-terracotta-darker">Illustration · not a real listing</p>
-          <h2 className="text-lg">Wedding helpers, Alkapuri</h2>
-          <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-ink-soft">Pay</dt><dd className="font-semibold">₹800 per worker</dd></div>
-            <div><dt className="text-ink-soft">Workers</dt><dd className="font-semibold">8 needed</dd></div>
-            <div className="col-span-2"><dt className="text-ink-soft">When</dt><dd className="font-semibold">5:00 PM – 12:00 AM IST</dd></div>
-          </dl>
-        </div>
-      </figure>
+    <div className="relative">
+      <div className="relative overflow-hidden rounded-2xl bg-ink shadow-md">
+        {failed ? (
+          <div aria-hidden="true" className="h-64 w-full bg-gradient-to-br from-terracotta via-marigold to-ink sm:h-[26rem]" />
+        ) : (
+          <img src="/images/hero.jpg" alt={HERO_ALT} width={1200} height={800} decoding="async" fetchPriority="high" onError={() => setFailed(true)} className="h-64 w-full object-cover sm:h-[26rem]" />
+        )}
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent" />
+        <p className="absolute left-3 top-3 rounded bg-ink/80 px-2 py-1 text-xs text-white">
+          Photo: porters at a Delhi railway station · <Link to="/credits" className="underline">credit</Link>
+        </p>
+      </div>
+      <div className="relative z-10 mx-3 -mt-14 sm:absolute sm:-bottom-6 sm:-left-6 sm:mx-0 sm:mt-0 sm:w-80">
+        <SampleListing />
+      </div>
     </div>
+  );
+}
+
+function TrustStrip() {
+  const items = [
+    ["No ID numbers", "We never ask for Aadhaar."],
+    ["You choose who to hire", "Compare applicants openly."],
+    ["No double-bookings", "Enforced by the database."],
+    ["Speak or type", "In your own words."],
+  ];
+  return (
+    <section aria-label="Why KaamSetu" className="border-y border-line bg-paper">
+      <ul className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-5 lg:grid-cols-4">
+        {items.map(([h, b]) => (
+          <li key={h} className="flex items-start gap-2">
+            <span aria-hidden="true" className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success-bg text-sm font-bold text-success">✓</span>
+            <span>
+              <span className="block text-sm font-bold sm:text-base">{h}</span>
+              <span className="block text-sm text-ink-soft">{b}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -85,23 +130,23 @@ export function Landing() {
   return (
     <>
       <section className="bg-cream">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-8 sm:py-14 lg:grid-cols-[1fr_1.1fr]">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-12 pt-8 sm:pb-16 sm:pt-12 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
           <div>
-            <p className="mb-3 inline-block rounded-full bg-marigold px-3 py-1 text-sm font-bold text-ink">Now in Vadodara, Gujarat</p>
-            <h1 className="text-4xl sm:text-5xl">
+            <p className="mb-4 inline-block rounded-full border border-terracotta bg-paper px-3 py-1 text-sm font-bold text-terracotta-darker">Now in Vadodara, Gujarat</p>
+            <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
               Short-term work, <span className="text-terracotta-dark">close to home.</span>
             </h1>
-            <p className="mt-4 max-w-xl text-lg text-ink-soft">
+            <p className="mt-5 max-w-xl text-lg text-ink-soft sm:text-xl">
               {APP_TAGLINE} Weddings, godowns, shops, shifting and cleaning: KaamSetu connects people who need a few hands for a day with nearby workers
               who are ready to start.
             </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               {signedIn ? (
-                <ButtonLink to={homeFor(me.profile.role)}>Open your dashboard</ButtonLink>
+                <ButtonLink to={homeFor(me.profile.role)} className="sm:min-w-52 sm:text-lg">Open your dashboard</ButtonLink>
               ) : (
                 <>
-                  <ButtonLink to="/signup?role=employer">I need workers</ButtonLink>
-                  <ButtonLink to="/signup?role=worker" variant="secondary">I'm looking for work</ButtonLink>
+                  <ButtonLink to="/signup?role=employer" className="min-h-12 sm:min-w-52 sm:text-lg">I need workers</ButtonLink>
+                  <ButtonLink to="/signup?role=worker" variant="secondary" className="min-h-12 sm:min-w-52 sm:text-lg">I'm looking for work</ButtonLink>
                 </>
               )}
             </div>
@@ -110,22 +155,19 @@ export function Landing() {
                 Already have an account? <Link to="/login" className="font-semibold text-ink underline">Log in</Link>
               </p>
             )}
-            <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-ink-soft">
-              <li>✓ No Aadhaar or ID numbers</li>
-              <li>✓ You choose who to hire</li>
-              <li>✓ No double-bookings</li>
-            </ul>
           </div>
           <Hero />
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-10" aria-labelledby="kinds-h">
+      <TrustStrip />
+
+      <section className="mx-auto max-w-6xl px-4 py-12" aria-labelledby="kinds-h">
         <h2 id="kinds-h" className="text-2xl sm:text-3xl">The kind of work you'll find</h2>
         <p className="mt-1 text-ink-soft">Short, hands-on jobs across Vadodara, from a few hours to a few days.</p>
         <ul className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {KINDS_OF_WORK.map((k) => (
-            <li key={k.slug} className="overflow-hidden rounded-xl border border-line bg-paper shadow-sm">
+            <li key={k.slug} className="overflow-hidden rounded-xl border border-line bg-paper shadow-sm transition-shadow hover:shadow-md">
               <CategoryImage slug={k.slug} name={k.name} className="h-28 w-full sm:h-36" />
               <div className="p-3 sm:p-4">
                 <h3 className="text-base sm:text-lg">{k.name}</h3>

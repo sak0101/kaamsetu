@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { baseRoutes, installFetch, meFor, renderApp, signInAs } from "./helpers";
@@ -28,6 +28,21 @@ describe("landing page", () => {
     installFetch({ ...baseRoutes("worker") });
     renderApp("/");
     expect(await screen.findByText(/illustration · not a real listing/i)).toBeInTheDocument();
+  });
+
+  it("has no hackathon or hosting-provider branding anywhere on the page", async () => {
+    installFetch({ ...baseRoutes("worker") });
+    const { container } = renderApp("/");
+    await screen.findByRole("heading", { level: 1, name: /short-term work/i });
+    expect(container.textContent ?? "").not.toMatch(/hackathon|godaddy/i);
+  });
+
+  it("shows a Contact section in the footer with a clickable email link", async () => {
+    installFetch({ ...baseRoutes("worker") });
+    renderApp("/");
+    const footer = (await screen.findByRole("heading", { name: "Contact" })).closest("footer") as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(within(footer).getByRole("link", { name: "info@kaamsetu.tech" })).toHaveAttribute("href", "mailto:info@kaamsetu.tech");
   });
 
   it("offers a dashboard link when already signed in", async () => {
