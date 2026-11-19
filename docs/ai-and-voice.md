@@ -51,7 +51,7 @@ npm run e2e -w @kaamsetu/web                                       # real Edge b
 
 Job cards and category cards use local files in `apps/web/public/images` (nothing is hotlinked), one per type of work:
 
-- **Five real photographs** (640x360, 16:9 JPEG, Unsplash License): loading & unloading, cleaning, construction helpers, painting helpers and gardening (`cat-*.jpg`). Photographer, source page and licence for each are in `public/images/credits.json` (shown on the Credits page) and `docs/image-attributions.md`.
-- **Three original SVG illustrations**: furniture shifting (`cat-furniture.svg`), packing (`cat-packing.svg`) and "Event help", which has a general picture plus five kinds of event (wedding, catering, exhibition, religious, corporate). No suitable, verifiable free photograph has been found for these yet, so the illustrations stay until one is.
+- **Eight real photographs** (640x360, 16:9 JPEG), one per category (`cat-*.jpg`): five under the Unsplash License (loading & unloading, cleaning, construction helpers, painting helpers, gardening) and three under the Pexels License (event help, furniture shifting, packing). Photographer, source page and licence for each are in `public/images/credits.json` (shown on the Credits page) and `docs/image-attributions.md`. The five Unsplash photos are shot in India; the three Pexels photos are not shown to be (no location on their pages), which is noted in the credits.
+- **Original SVG illustrations** remain only for the five kinds of event used on Event help *job* cards (wedding, catering, exhibition, religious, corporate: `event-*.svg`); the general Event help category card is a photograph.
 
 The event kind is chosen from the job's own title and description by keyword rules (`lib/jobImage.ts`, multilingual) only for "Event help" jobs; there is no AI call and no network request. A missing file falls back to a coloured tile.

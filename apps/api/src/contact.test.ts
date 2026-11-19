@@ -63,8 +63,8 @@ describe("POST /api/contact", () => {
   let send: ReturnType<typeof vi.fn<(m: ContactMessage) => Promise<void>>>;
   let logs: ReturnType<typeof vi.spyOn>[];
 
-  async function start(mailer: ContactMailer | null) {
-    server = createApp({ mailer }).listen(0); // no Supabase deps: the route must still work
+  async function start(mailer: ContactMailer | null, contactDemo = false) {
+    server = createApp({ mailer, contactDemo }).listen(0); // no Supabase deps: the route must still work
     await new Promise((resolve) => server.once("listening", resolve));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   }
@@ -149,6 +149,43 @@ describe("POST /api/contact", () => {
     expect(logged).toContain("syscall=connect");
     expect(logged).toContain("port=465");
     expect(logged).not.toMatch(/secret-pass|Asha|asha@example/);
+  });
+
+  describe("demo mode (CONTACT_DEMO_MODE)", () => {
+    it("acknowledges a valid submission as simulated: demo:true, nothing sent, nothing logged", async () => {
+      await start({ send }, true);
+      const res = await post(valid);
+      expect(res.status).toBe(202);
+      expect(await res.json()).toEqual({ ok: true, demo: true });
+      expect(send).not.toHaveBeenCalled();
+      expect(logs.flatMap((l) => l.mock.calls.flat()).join(" ")).not.toMatch(/Asha|asha@example|shop for helpers/);
+    });
+
+    it("works with no SMTP configured at all", async () => {
+      await start(null, true);
+      const res = await post(valid);
+      expect(res.status).toBe(202);
+      expect(((await res.json()) as { demo?: boolean }).demo).toBe(true);
+    });
+
+    it("still validates input", async () => {
+      await start({ send }, true);
+      const res = await post({ ...valid, email: "not-an-email" });
+      expect(res.status).toBe(422);
+    });
+
+    it("is off by default: a real send answers { ok: true } with no demo flag", async () => {
+      await start({ send });
+      expect(await (await post(valid)).json()).toEqual({ ok: true });
+    });
+  });
+
+  it("with demo mode off, an SMTP failure is still a real error and never looks like success", async () => {
+    send.mockRejectedValue(Object.assign(new Error("boom"), { code: "EAUTH", responseCode: 535 }));
+    await start({ send }, false);
+    const res = await post(valid);
+    expect(res.status).toBe(502);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("contact_failed");
   });
 
   it("rejects an oversized body", async () => {

@@ -1,8 +1,8 @@
 import { wordRe } from "./voiceQuery";
 
 /**
- * Which picture a job card shows. KaamSetu's pictures are one consistent set of original illustrations
- * (public/images/*.svg): one per type of work, plus five for the kinds of event under "Event help".
+ * Which picture a job card shows. Each type of work has one credited photograph (public/images/cat-*.jpg, see
+ * credits.json); the five kinds of event under "Event help" keep their original illustrations (public/images/event-*.svg).
  *
  * The event kind is read from the job's own title and description with plain keyword rules (English, Hindi,
  * Gujarati and Hinglish). There is no AI call and no network request: choosing a picture never costs anything
@@ -11,14 +11,14 @@ import { wordRe } from "./voiceQuery";
 
 /** One picture per type of work (the work category slug is the key). */
 export const FILE_BY_SLUG: Record<string, string> = {
-  event_help: "event-generic.svg",
+  event_help: "cat-event.jpg",
   loading_unloading: "cat-loading.jpg",
-  furniture_shifting: "cat-furniture.svg",
+  furniture_shifting: "cat-furniture.jpg",
   cleaning: "cat-cleaning.jpg",
   construction_helper: "cat-construction.jpg",
   painting_helper: "cat-painting.jpg",
   gardening: "cat-gardening.jpg",
-  packing: "cat-packing.svg",
+  packing: "cat-packing.jpg",
 };
 
 export type EventKind = "wedding" | "catering" | "exhibition" | "religious" | "corporate";

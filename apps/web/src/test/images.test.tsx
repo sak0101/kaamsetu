@@ -36,7 +36,26 @@ describe("image assets", () => {
     expect(new Set(all).size).toBe(all.length); // no two things share a picture
   });
 
-  it("is ONE consistent set: every picture is an original SVG with no embedded photo, script or external reference", () => {
+  it("all 8 category cards are photographs (not illustrations), stored locally", () => {
+    for (const [slug, file] of Object.entries(FILE_BY_SLUG)) {
+      expect(file, slug).toMatch(/^cat-.+\.jpg$/);
+      expect(credits.map((c) => c.file), `${file} needs a credit`).toContain(file);
+    }
+    expect(imageFileFor("event_help")).toBe("cat-event.jpg");
+    expect(imageFileFor("furniture_shifting")).toBe("cat-furniture.jpg");
+    expect(imageFileFor("packing")).toBe("cat-packing.jpg");
+  });
+
+  it("every credited photograph is 640x360 (16:9) and every SVG is an original with no embedded photo, script or external reference", () => {
+    for (const c of credits) {
+      const b = fs.readFileSync(path.join(imagesDir, c.file));
+      let i = 2;
+      while (i < b.length) { // find the JPEG start-of-frame marker to read the size
+        const m = b[i + 1]!;
+        if (m >= 0xc0 && m <= 0xc3) { expect([b.readUInt16BE(i + 7), b.readUInt16BE(i + 5)], c.file).toEqual([640, 360]); break; }
+        i += 2 + b.readUInt16BE(i + 2);
+      }
+    }
     for (const file of fs.readdirSync(imagesDir).filter((f) => f !== "credits.json")) {
       expect(file, "only SVG illustrations (or credited photographs) belong here").toMatch(/\.(svg|jpg)$/);
       if (file.endsWith(".svg")) {

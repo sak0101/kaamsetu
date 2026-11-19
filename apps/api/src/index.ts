@@ -42,11 +42,14 @@ try {
 } catch (err) {
   console.warn(`[kaamsetu] Contact form disabled: ${(err as Error).message}`);
 }
+// Opt-in demo switch (only the exact value "true"): contact submissions are acknowledged but NOT emailed.
+const contactDemo = process.env.CONTACT_DEMO_MODE === "true";
+if (contactDemo) console.warn("[kaamsetu] CONTACT_DEMO_MODE is on: contact form email delivery is simulated, nothing is sent");
 const trustProxy = Number(process.env.TRUST_PROXY_HOPS) || undefined;
 
 // In the production bundle, server.js sits next to public/. In dev (tsx) this
 // directory does not exist and static serving is skipped; Vite serves the SPA.
-const app = createApp({ staticDir: path.resolve(__dirname, "public"), deps, publicConfig, mailer, trustProxy });
+const app = createApp({ staticDir: path.resolve(__dirname, "public"), deps, publicConfig, mailer, contactDemo, trustProxy });
 
 // GoDaddy Node.js Hosting requires an explicit IPv4 wildcard bind on process.env.PORT.
 const HOST = "0.0.0.0";

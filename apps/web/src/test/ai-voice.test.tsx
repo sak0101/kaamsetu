@@ -530,10 +530,10 @@ describe("worker dashboard summary", () => {
 
 // ------------------------------------------------------------------------ category photos
 describe("category images", () => {
-  it("uses the locally stored illustration for a category, as a decorative image with dimensions", () => {
+  it("uses the locally stored photograph for a category, as a decorative image with dimensions", () => {
     const { container } = render(<CategoryImage slug="event_help" name="Event help" />);
     const img = container.querySelector("img")!;
-    expect(img).toHaveAttribute("src", "/images/event-generic.svg");
+    expect(img).toHaveAttribute("src", "/images/cat-event.jpg");
     expect(img).toHaveAttribute("alt", "");
     expect(img).toHaveAttribute("loading", "lazy");
     expect(img).toHaveAttribute("width");

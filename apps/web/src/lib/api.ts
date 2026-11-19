@@ -157,7 +157,7 @@ export interface JobSearchParams {
 export const api = {
   /** Public contact form (no sign-in). `website` is the honeypot: it must stay empty for real people. */
   sendContact: (body: { name: string; email: string; message: string; website?: string }) =>
-    request<{ ok: true }>("POST", "/contact", { body, auth: false }),
+    request<{ ok: true; demo?: boolean }>("POST", "/contact", { body, auth: false }),
   publicConfig: () => request<{ supabaseUrl: string; supabaseAnonKey: string }>("GET", "/public-config", { auth: false }),
 
   me: () => request<MeResponse>("GET", "/me"),

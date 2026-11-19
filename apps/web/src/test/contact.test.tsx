@@ -73,6 +73,25 @@ describe("footer contact form", () => {
     expect(within(await screen.findByRole("form", { name: "Contact KaamSetu" })).getByLabelText(/Your name/)).toHaveValue("");
   });
 
+  it("in demo mode shows the received message and a Demo mode note, and never says an email was sent", async () => {
+    installFetch({ ...baseRoutes("worker"), "POST /api/contact": { status: 202, json: { ok: true, demo: true } } });
+    const { user, form } = await openForm();
+    await fill(user, form, { name: "Asha Patel", email: "asha@example.com", message: "I would like to list my shop." });
+    await user.click(within(form).getByRole("button", { name: "Send message" }));
+    expect(await screen.findByText("Thank you! Your request has been received.")).toBeInTheDocument();
+    expect(screen.getByText(/Demo mode/)).toHaveTextContent(/simulated, no email was sent/);
+    expect(screen.queryByText(/your message was sent/i)).not.toBeInTheDocument();
+  });
+
+  it("without the demo flag a real success shows no Demo mode note", async () => {
+    installFetch({ ...baseRoutes("worker"), "POST /api/contact": { status: 202, json: { ok: true } } });
+    const { user, form } = await openForm();
+    await fill(user, form, { name: "Asha Patel", email: "asha@example.com", message: "I would like to list my shop." });
+    await user.click(within(form).getByRole("button", { name: "Send message" }));
+    expect(await screen.findByText(/your message was sent/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Demo mode/)).not.toBeInTheDocument();
+  });
+
   it("shows the server's message for a rate limit and keeps what was typed", async () => {
     installFetch({
       ...baseRoutes("worker"),

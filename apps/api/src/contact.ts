@@ -20,7 +20,7 @@ export const contactBody = z
  * Abuse controls: strict schema, small body limit, honeypot, per-client and global hourly caps.
  * Message contents, names and addresses are never logged.
  */
-export function createContactRouter(mailer: ContactMailer | null): Router {
+export function createContactRouter(mailer: ContactMailer | null, opts: { demo?: boolean } = {}): Router {
   const r = Router();
   r.use(express.json({ limit: "8kb" }));
 
@@ -43,6 +43,15 @@ export function createContactRouter(mailer: ContactMailer | null): Router {
     // A filled honeypot is a bot. Answer exactly like a success so it learns nothing; send nothing.
     if (body.website && body.website.trim() !== "") {
       res.status(202).json({ ok: true });
+      return;
+    }
+
+    // Demo mode (explicit opt-in via CONTACT_DEMO_MODE=true): nothing is sent or stored, and the response says so
+    // (`demo: true`) so the page can label it. Real delivery and its errors are unchanged when the switch is off.
+    if (opts.demo) {
+      perClient.hit(req.ip ?? "unknown");
+      everyone.hit("all");
+      res.status(202).json({ ok: true, demo: true });
       return;
     }
 

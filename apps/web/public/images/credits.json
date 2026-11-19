@@ -39,5 +39,32 @@
     "license": "Unsplash License",
     "license_url": "https://unsplash.com/license",
     "notes": "Location not stated on the Unsplash page."
+  },
+  {
+    "file": "cat-furniture.jpg",
+    "title": "Two men lifting a green sofa in a well-lit room with arched windows",
+    "author": "RDNE Stock project",
+    "source_url": "https://www.pexels.com/photo/close-up-shot-of-men-carrying-a-couch-7464662/",
+    "license": "Pexels License",
+    "license_url": "https://www.pexels.com/license/",
+    "notes": "Not shot in India (no location stated on the page)."
+  },
+  {
+    "file": "cat-packing.jpg",
+    "title": "Young couple packing fragile things into carton boxes while relocating",
+    "author": "SHVETS production",
+    "source_url": "https://www.pexels.com/photo/attentive-young-couple-packing-stuff-while-relocating-in-new-flat-7203883/",
+    "license": "Pexels License",
+    "license_url": "https://www.pexels.com/license/",
+    "notes": "Not shot in India (no location stated on the page)."
+  },
+  {
+    "file": "cat-event.jpg",
+    "title": "A caterer serves food at a buffet",
+    "author": "Steward Masweneng",
+    "source_url": "https://www.pexels.com/photo/man-opening-container-with-food-12253092/",
+    "license": "Pexels License",
+    "license_url": "https://www.pexels.com/license/",
+    "notes": "Catering at an event buffet. Not a wedding and not shown to be in India: the page states neither a location nor the type of event."
   }
 ]

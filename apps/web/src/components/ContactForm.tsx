@@ -29,6 +29,7 @@ export function ContactForm() {
   const [website, setWebsite] = useState(""); // honeypot: people never see or fill this
   const [errors, setErrors] = useState<Errors>({});
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [demo, setDemo] = useState(false); // the server said delivery was simulated (CONTACT_DEMO_MODE)
   const [failure, setFailure] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
@@ -40,7 +41,8 @@ export function ContactForm() {
 
     setState("sending");
     try {
-      await api.sendContact({ name: name.trim(), email: email.trim(), message: message.trim(), website });
+      const res = await api.sendContact({ name: name.trim(), email: email.trim(), message: message.trim(), website });
+      setDemo(res?.demo === true);
       setState("sent");
       setName("");
       setEmail("");
@@ -58,8 +60,13 @@ export function ContactForm() {
   if (state === "sent") {
     return (
       <div className="mt-4 text-ink">
-        <Alert tone="success" title="Thank you, your message was sent.">
-          We'll reply to the email address you gave us.{" "}
+        <Alert tone="success" title={demo ? "Thank you! Your request has been received." : "Thank you, your message was sent."}>
+          {demo ? (
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide">Demo mode: email delivery is simulated, no email was sent.</span>
+          ) : (
+            <>We'll reply to the email address you gave us. </>
+          )}
+          {" "}
           <button type="button" onClick={() => setState("idle")} className="font-semibold underline">
             Send another message
           </button>

@@ -17,6 +17,8 @@ export interface AppOptions {
   publicConfig?: { supabaseUrl: string; supabaseAnonKey: string };
   /** SMTP-backed contact form sender. Null/omitted: POST /api/contact answers 503 contact_not_configured. */
   mailer?: ContactMailer | null;
+  /** Demo mode for the contact form: validates, answers `{ ok, demo: true }`, sends nothing. Off unless explicitly enabled. */
+  contactDemo?: boolean;
   /** Reverse-proxy hops to trust for req.ip (per-client rate limits). Leave unset unless verified. */
   trustProxy?: number;
 }
@@ -40,7 +42,7 @@ export function createApp(options: AppOptions = {}) {
   }
 
   // Public and independent of Supabase, so it works even when the data API is not configured.
-  app.use("/api/contact", createContactRouter(options.mailer ?? null));
+  app.use("/api/contact", createContactRouter(options.mailer ?? null, { demo: options.contactDemo === true }));
 
   if (options.deps) {
     app.use("/api", createApiRouter(options.deps));
