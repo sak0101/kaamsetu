@@ -453,19 +453,21 @@ describe("worker voice and text search", () => {
     expect(within(group).getByLabelText("Locality")).toHaveValue("1");
   });
 
-  it("filters the loaded jobs by date (IST)", async () => {
-    installFetch({
+  it("filters by date (IST) on the server", async () => {
+    const f = installFetch({
       ...baseRoutes("worker"),
-      "GET /api/jobs": { json: { jobs: [sofa, wedding], page: { limit: 20, offset: 0 } } },
+      "GET /api/jobs": ({ url }) => ({ json: { jobs: url.searchParams.get("date_from") === "2099-11-26" ? [wedding] : [sofa, wedding], page: { limit: 20, offset: 0 } } }),
       "GET /api/me/bookings": { json: { bookings: [] } },
       "GET /api/me/applications": { json: { applications: [] } },
     });
     renderApp("/worker");
-    await screen.findByRole("link", { name: "Wedding helpers" });
+    await screen.findByRole("link", { name: "Shift household goods" });
     const date = screen.getAllByLabelText("Date").find((el) => el.closest("form")?.getAttribute("aria-label") === "Filter jobs")!;
     fireEvent.change(date, { target: { value: "2099-11-26" } });
-    expect(screen.getByRole("link", { name: "Wedding helpers" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Shift household goods" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Wedding helpers" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("link", { name: "Shift household goods" })).not.toBeInTheDocument());
+    const last = new URLSearchParams(f.callsTo("GET /api/jobs").at(-1)!.search);
+    expect([last.get("date_from"), last.get("date_to")]).toEqual(["2099-11-26", "2099-11-26"]);
   });
 });
 
@@ -528,10 +530,10 @@ describe("worker dashboard summary", () => {
 
 // ------------------------------------------------------------------------ category photos
 describe("category images", () => {
-  it("uses the locally stored photo for a category, as a decorative image with dimensions", () => {
+  it("uses the locally stored illustration for a category, as a decorative image with dimensions", () => {
     const { container } = render(<CategoryImage slug="event_help" name="Event help" />);
     const img = container.querySelector("img")!;
-    expect(img).toHaveAttribute("src", "/images/cat-event.jpg");
+    expect(img).toHaveAttribute("src", "/images/event-generic.svg");
     expect(img).toHaveAttribute("alt", "");
     expect(img).toHaveAttribute("loading", "lazy");
     expect(img).toHaveAttribute("width");

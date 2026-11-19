@@ -28,7 +28,7 @@ const NAV: Record<Role, { to: string; label: string; end?: boolean }[]> = {
 
 function Brand({ to }: { to: string }) {
   return (
-    <Link to={to} className="text-2xl font-extrabold tracking-tight text-white">
+    <Link to={to} className="inline-flex min-h-11 items-center text-2xl font-extrabold tracking-tight text-white">
       <span className="border-b-4 border-terracotta pb-0.5">{APP_NAME}</span>
     </Link>
   );
@@ -132,7 +132,7 @@ function AppShell() {
         <Outlet />
       </main>
       <footer className="border-t border-line px-4 py-4 text-center text-sm text-ink-soft">
-        {APP_NAME} · Vadodara, Gujarat · We never ask for Aadhaar or ID numbers. · <Link to="/credits" className="underline">Photo credits</Link>
+        {APP_NAME} · Vadodara, Gujarat · We never ask for Aadhaar or ID numbers. · <Link to="/credits" className="inline-flex min-h-11 items-center underline">Image credits</Link>
       </footer>
     </div>
   );
@@ -219,10 +219,10 @@ export function PublicShell() {
           <nav aria-label="Footer">
             <h2 className="text-base font-bold text-marigold">Explore</h2>
             <ul className="mt-3 flex flex-col gap-1">
-              <li><Link to="/signup?role=employer" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Hire workers</Link></li>
-              <li><Link to="/signup?role=worker" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Find work</Link></li>
-              <li><Link to="/login" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Log in</Link></li>
-              <li><Link to="/credits" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Photo credits</Link></li>
+              <li><Link to="/signup?role=employer" className="inline-flex min-h-11 items-center underline-offset-2 hover:underline">Hire workers</Link></li>
+              <li><Link to="/signup?role=worker" className="inline-flex min-h-11 items-center underline-offset-2 hover:underline">Find work</Link></li>
+              <li><Link to="/login" className="inline-flex min-h-11 items-center underline-offset-2 hover:underline">Log in</Link></li>
+              <li><Link to="/credits" className="inline-flex min-h-11 items-center underline-offset-2 hover:underline">Image credits</Link></li>
             </ul>
           </nav>
           <section aria-labelledby="contact-h" className="sm:col-span-2 lg:col-span-1">

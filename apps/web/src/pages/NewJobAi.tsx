@@ -5,7 +5,7 @@ import { Alert, Button, Card, ErrorAlert, PageHeader, TextAreaField, TextField }
 import { ApiError, api, type AiDraftResult, type CreateJobInput } from "../lib/api";
 import { serverFieldErrors } from "../lib/forms";
 import { useAsync } from "../lib/useAsync";
-import { EMPTY_JOB, JobForm, type FieldFlags, type FlagField, type JobFormValues } from "./NewJob";
+import { EMPTY_JOB, JobForm, saveLocationQuietly, type FieldFlags, type FlagField, type JobFormValues, type JobLocationInput } from "./NewJob";
 
 const EXAMPLES = [
   "I need 8 helpers for a wedding at a venue in Alkapuri, Vadodara tomorrow from 5 PM to midnight. Payment is ₹800 per person. They should help with guest coordination and basic arrangements.",
@@ -29,6 +29,8 @@ export function draftToForm(d: AiDraftResult["draft"]): JobFormValues {
     workers: d.workers_needed ? String(d.workers_needed) : "",
     payType: d.pay_type ?? "",
     pay: d.pay_amount_paise ? rupees(d.pay_amount_paise) : "",
+    address: "",
+    landmark: "",
   };
 }
 
@@ -122,13 +124,14 @@ export function NewJobAi() {
     await createDraft([...answered, ...fresh]);
   }
 
-  async function publish(payload: CreateJobInput) {
+  async function publish(payload: CreateJobInput, location: JobLocationInput | null) {
     setPublishing(true);
     setPublishError(null);
     setPublishFieldErrors({});
     try {
       const { id } = await api.createJob(payload); // the ONLY place a job is created, and only after the confirmation tick
-      navigate(`/employer/jobs/${id}`, { state: { created: true } });
+      const locationSaved = location ? await saveLocationQuietly(id, location) : true;
+      navigate(`/employer/jobs/${id}`, { state: { created: true, locationSaved } });
     } catch (err) {
       setPublishError(err);
       setPublishFieldErrors(serverFieldErrors(err));
@@ -201,7 +204,7 @@ export function NewJobAi() {
               <Button type="submit" loading={drafting} disabled={text.trim().length < 10 || available === false}>
                 {drafting ? "Reading your request…" : "Create draft"}
               </Button>
-              <Link to="/employer/jobs/new" className="font-semibold underline">Prefer the standard form?</Link>
+              <Link to="/employer/jobs/new" className="inline-flex min-h-11 items-center font-semibold underline">Prefer the standard form?</Link>
             </div>
           </form>
         </Card>

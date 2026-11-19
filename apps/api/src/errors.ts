@@ -39,6 +39,16 @@ const MESSAGES: Record<string, string> = {
   invalid_category: "Unknown work category.",
   invalid_locality: "Unknown locality.",
   too_many_categories: "Choose at most 5 work categories.",
+  job_not_editable: "This job can no longer be changed.",
+  invalid_location: "Enter an address of 5 to 200 characters and a landmark of up to 100.",
+  invalid_outcome: "Choose completed or no-show.",
+  booking_not_finishable: "This booking has already been completed, cancelled or marked as a no-show.",
+  job_not_started: "You can only do this after the job has started.",
+  booking_not_completed: "Reviews are only possible for completed bookings.",
+  already_reviewed: "You have already reviewed this booking.",
+  invalid_rating: "Choose a rating from 1 to 5.",
+  review_parties_invalid: "Only the worker and employer of a booking can review it.",
+  review_immutable: "Reviews cannot be changed.",
 };
 
 const MACHINE_CODE = /^[a-z][a-z0-9_]{0,63}$/;

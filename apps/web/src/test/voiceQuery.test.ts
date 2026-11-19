@@ -88,3 +88,49 @@ describe("interpretJobQuery", () => {
     expect(interpretJobQuery("wedding jobs", small).categoryId).toBeNull();
   });
 });
+
+// Hindi, Gujarati and Hinglish. The word lists are first-pass and need native-speaker review (see docs/ai-and-voice.md).
+describe("interpretJobQuery: Hindi, Gujarati and Hinglish", () => {
+  const read = (text: string) => interpretJobQuery(text, ctx);
+
+  it("understands a Hindi request: wedding work in Alkapuri tomorrow", () => {
+    expect(read("मुझे कल अलकापुरी में शादी का काम चाहिए")).toMatchObject({ categoryId: 4, localityId: 1, date: "2026-11-20", keywords: "", recognised: true });
+  });
+
+  it("understands a Gujarati request: cleaning work in Gotri tomorrow", () => {
+    // Gujarati attaches postpositions to the word: "ગોત્રીમાં" (in Gotri), "સફાઈનું" (of cleaning)
+    expect(read("મને કાલે ગોત્રીમાં સફાઈનું કામ જોઈએ")).toMatchObject({ categoryId: 3, localityId: 2, date: "2026-11-20", keywords: "", recognised: true });
+    expect(read("મને કાલે ગોત્રી માં સફાઈ કામ જોઈએ")).toMatchObject({ categoryId: 3, localityId: 2, date: "2026-11-20", keywords: "" });
+  });
+
+  it("understands Hinglish (Hindi in Latin letters)", () => {
+    expect(read("mujhe aaj Gotri mein safai ka kaam chahiye")).toMatchObject({ categoryId: 3, localityId: 2, date: "2026-11-19", keywords: "" });
+    expect(read("kal Alkapuri shaadi ke liye waiter chahiye")).toMatchObject({ categoryId: 4, localityId: 1, date: "2026-11-20" });
+    expect(read("parso Akota mein loading ka kaam")).toMatchObject({ categoryId: 1, localityId: 5, date: "2026-11-21" });
+  });
+
+  it("understands mixed-language requests", () => {
+    expect(read("tomorrow अलकापुरी में wedding helper")).toMatchObject({ categoryId: 4, localityId: 1, date: "2026-11-20" });
+    expect(read("Gotri માં cleaning kal")).toMatchObject({ categoryId: 3, localityId: 2, date: "2026-11-20" });
+  });
+
+  it("understands Hindi, Gujarati and Hinglish weekday names and 'next'", () => {
+    expect(read("शनिवार को पेंटिंग का काम")).toMatchObject({ categoryId: 6, date: "2026-11-21" }); // Saturday
+    expect(read("રવિવારે પેકિંગ")).toMatchObject({ categoryId: 8, date: "2026-11-22" }); // "on Sunday"
+    expect(read("somvar ko packing")).toMatchObject({ categoryId: 8, date: "2026-11-23" }); // Monday
+    expect(read("अगले गुरुवार माली")).toMatchObject({ categoryId: 7, date: "2026-11-26" }); // next Thursday: a week away, not today
+  });
+
+  it("keeps real search words and drops filler words in every language", () => {
+    expect(read("mujhe kal Gotri mein sofa safai chahiye").keywords).toBe("sofa");
+    expect(read("मुझे कल गोत्री में सोफा सफाई चाहिए").keywords).toBe("सोफा");
+  });
+
+  it("does not match a category word inside a longer word, or invent anything from unrelated text", () => {
+    expect(read("मालवीय नगर")).toMatchObject({ categoryId: null }); // 'माल' inside 'मालवीय' is a different word
+    const nothing = read("नमस्ते");
+    expect(nothing.categoryId).toBeNull();
+    expect(nothing.localityId).toBeNull();
+    expect(nothing.date).toBeNull();
+  });
+});

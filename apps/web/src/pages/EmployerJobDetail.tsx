@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { Alert, Badge, Button, Card, EmptyState, ErrorAlert, ErrorState, Fact, LoadingBlock, TextAreaField } from "../components/ui";
+import { EmployerLocationPanel } from "../components/JobLocation";
 import { ApiError, api } from "../lib/api";
 import { formatDate, formatPay, formatRange, relativeTime } from "../lib/format";
 import { jobDisplay, type Tone } from "../lib/labels";
@@ -181,7 +182,14 @@ export function EmployerJobDetail() {
   const location = useLocation();
   const { version } = useNotifications();
   const { categoryName, localityName } = useReference();
-  const [notice, setNotice] = useState<string | null>((location.state as { created?: boolean } | null)?.created ? "Job posted. Workers can now apply." : null);
+  const created = location.state as { created?: boolean; locationSaved?: boolean } | null;
+  const [notice, setNotice] = useState<string | null>(
+    created?.created
+      ? created.locationSaved === false
+        ? "Job posted. Workers can now apply, but the address could not be saved. You can add it below."
+        : "Job posted. Workers can now apply."
+      : null,
+  );
 
   const jobQ = useAsync(() => api.job(id), [id, version]);
   const applicantsQ = useAsync(() => api.applicants(id), [id, version]);
@@ -230,6 +238,7 @@ export function EmployerJobDetail() {
           {job.status === "cancelled" && <Fact label="Cancelled">{job.cancelled_reason ?? "Cancelled by you"}</Fact>}
         </dl>
         <p className="mt-4 whitespace-pre-wrap">{job.description}</p>
+        {job.status !== "cancelled" && <EmployerLocationPanel jobId={job.id} localityName={localityName(job.locality_id)} editable={!ended} />}
         {canCancel && <div className="mt-5"><CancelJobPanel job={job} onDone={() => { setNotice("Job cancelled."); reloadAll(); }} /></div>}
       </Card>
 
@@ -238,7 +247,8 @@ export function EmployerJobDetail() {
           <h2 id="applicants-h" className="text-xl">Applicants{applicants.length > 0 ? ` (${applicants.length})` : ""}</h2>
           <p className="text-sm text-ink-soft">
             Best match first. The match is worked out from three facts: type of work (most weight), locality and experience. Anything a worker hasn't shared is left
-            out, never counted against them. There are no ratings or reviews yet, so new workers aren't disadvantaged. You make the final decision.
+            out, never counted against them. Ratings and no-shows come only from completed bookings and are shown as facts, never added to the match, so new workers
+            aren't disadvantaged. You make the final decision.
           </p>
         </div>
 

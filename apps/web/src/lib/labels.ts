@@ -55,6 +55,8 @@ export function describeNotification(n: NotificationItem, role: Role): { text: s
       const why = reasonLabel(n.payload.reason);
       return { text: `Your application for ${title} wasn't selected${why ? `. ${why}` : "."}`, to: "/worker/applications" };
     }
+    case "new_matching_job":
+      return { text: `New job near you: ${title}`, to: n.payload.job_id ? `/worker/jobs/${n.payload.job_id}` : "/worker" };
     case "booking_confirmed":
       return { text: `You're booked for ${title}`, to: "/worker/bookings" };
     case "booking_cancelled": {

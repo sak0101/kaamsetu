@@ -6,8 +6,8 @@ import { homeFor } from "../components/Layout";
 import { Badge, ButtonLink } from "../components/ui";
 import { useAuth } from "../lib/auth";
 
-/** Alt text describes what the hero photo actually shows (see public/images/credits.json). */
-const HERO_ALT = "Porters in red shirts carrying suitcases on their heads on a railway platform in Delhi";
+/** Alt text describes what the hero illustration actually shows. It is original artwork, not a real place or real people. */
+const HERO_ALT = "Illustration of a delivery truck loaded with crates and three helpers carrying boxes, in front of a city skyline";
 
 const KINDS_OF_WORK: { slug: string; name: string; blurb: string }[] = [
   { slug: "event_help", name: "Wedding & event help", blurb: "Guest coordination, serving, set-up and clear-up." },
@@ -85,12 +85,8 @@ function Hero() {
         {failed ? (
           <div aria-hidden="true" className="h-64 w-full bg-gradient-to-br from-terracotta via-marigold to-ink sm:h-[26rem]" />
         ) : (
-          <img src="/images/hero.jpg" alt={HERO_ALT} width={1200} height={800} decoding="async" fetchPriority="high" onError={() => setFailed(true)} className="h-64 w-full object-cover sm:h-[26rem]" />
+          <img src="/images/hero.svg" alt={HERO_ALT} width={1200} height={800} decoding="async" fetchPriority="high" onError={() => setFailed(true)} className="h-64 w-full object-cover sm:h-[26rem]" />
         )}
-        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent" />
-        <p className="absolute left-3 top-3 rounded bg-ink/80 px-2 py-1 text-xs text-white">
-          Photo: porters at a Delhi railway station · <Link to="/credits" className="underline">credit</Link>
-        </p>
       </div>
       <div className="relative z-10 mx-3 -mt-14 sm:absolute sm:-bottom-6 sm:-left-6 sm:mx-0 sm:mt-0 sm:w-80">
         <SampleListing />

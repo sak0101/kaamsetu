@@ -260,9 +260,9 @@ describe("architecture guardrails", () => {
   it("uses only the endpoints documented in docs/api.md", () => {
     const documented = new Set([
       "/public-config", "/me", "/me/profile", "/me/worker-profile", "/categories", "/localities", "/jobs", "/employer/jobs", "/me/applications",
-      "/me/bookings", "/notifications", "/notifications/read", "/me/contact", "/ai/status", "/ai/job-draft", "/contact",
+      "/me/bookings", "/notifications", "/notifications/read", "/me/contact", "/ai/status", "/ai/job-draft", "/ai/worker-profile-draft", "/contact", "/me/reviews",
     ]);
-    const dynamic = [/^\/jobs\/\$\{[^}]+\}$/, /^\/jobs\/\$\{[^}]+\}\/(cancel|applications|applicants)$/, /^\/applications\/\$\{[^}]+\}\/(withdraw|accept|reject)$/, /^\/bookings\/\$\{[^}]+\}\/(cancel|contact)$/];
+    const dynamic = [/^\/jobs\/\$\{[^}]+\}$/, /^\/jobs\/\$\{[^}]+\}\/(cancel|applications|applicants|location)$/, /^\/applications\/\$\{[^}]+\}\/(withdraw|accept|reject)$/, /^\/bookings\/\$\{[^}]+\}\/(cancel|contact|finish|review)$/];
     const used = [...read(path.join(srcDir, "lib/api.ts")).matchAll(/request<[^>]*(?:<[^>]*>[^>]*)*>\(\s*"[A-Z]+",\s*[`"]([^`"]+)[`"]/g)].map((m) => m[1]!);
     expect(used.length).toBeGreaterThan(15);
     for (const u of used) expect(documented.has(u) || dynamic.some((re) => re.test(u)), `undocumented endpoint ${u}`).toBe(true);

@@ -7,7 +7,7 @@
  * Fairness rules (enforced by tests):
  *  - Missing data (locality or experience not provided) is EXCLUDED and the
  *    remaining weights are renormalised; it is never treated as zero.
- *  - Reviews, attendance and reliability are not used because none exist yet.
+ *  - Reviews and no-shows (from completed bookings) are displayed as facts but are NOT part of the percentage.
  *    A worker with no history is never penalised for it.
  *  - An overlapping confirmed booking is a hard availability fact: it is flagged
  *    and sorts last, but it does not change the percentage.
@@ -30,6 +30,10 @@ export interface ApplicantRow {
   availability_note: string | null;
   member_since: string;
   completed_jobs: number;
+  /** Facts from completed bookings. Never a penalty: 0 / null for every new worker. */
+  no_show_count: number;
+  review_count: number;
+  avg_rating: number | null;
 }
 
 export interface Fit {
@@ -91,6 +95,11 @@ export function computeFit(a: ApplicantRow): Fit {
   // History on KaamSetu: shown as a fact, never scored.
   if (a.completed_jobs > 0) reasons.push(`Completed ${plural(a.completed_jobs, "job")} through KaamSetu`);
   else notes.push("New to KaamSetu: no completed jobs yet. This isn't held against them");
+  // Reviews and no-shows are shown as plain facts. They are NOT part of the percentage, so having none costs nothing.
+  if (a.review_count > 0 && a.avg_rating !== null) {
+    reasons.push(`Rated ${a.avg_rating.toFixed(1)} out of 5 from ${plural(a.review_count, "review")}`);
+  }
+  if (a.no_show_count > 0) notes.push(`Recorded as a no-show ${plural(a.no_show_count, "time")} by employers`);
   excluded.push("reviews", "reliability");
 
   if (a.skills.length) reasons.push(`Skills: ${a.skills.join(", ")}`);

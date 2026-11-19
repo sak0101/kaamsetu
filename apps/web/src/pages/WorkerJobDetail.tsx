@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { employerLabel } from "../components/JobCard";
+import { WorkerLocationSection } from "../components/JobLocation";
 import { Alert, Badge, Button, Card, EmptyState, ErrorAlert, ErrorState, Fact, LoadingBlock, TextAreaField } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { formatPay, formatRange } from "../lib/format";
@@ -140,6 +141,9 @@ export function WorkerJobDetail() {
         </dl>
         <h2 className="mt-5 text-lg">About this job</h2>
         <p className="mt-1 whitespace-pre-wrap">{job.description}</p>
+        {job.status !== "cancelled" && (
+          <WorkerLocationSection jobId={job.id} booked={my_application?.status === "accepted"} localityName={localityName(job.locality_id)} />
+        )}
       </Card>
       <ApplicationPanel job={job} application={my_application} onChanged={reload} />
     </div>

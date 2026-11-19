@@ -8,11 +8,13 @@ import type {
   Deps,
   EmployerName,
   JobRow,
+  JobLocationRow,
   NotificationRow,
   Page,
   ProfileRow,
   Reads,
   RpcName,
+  ReviewRow,
   RpcResult,
 } from "./types";
 
@@ -71,6 +73,8 @@ export interface FakeState {
   bookings: BookingRow[];
   notifications: NotificationRow[];
   contacts: Record<string, string>;
+  location: JobLocationRow | null;
+  reviews: ReviewRow[];
 }
 
 export function makeFake(): { deps: Deps; state: FakeState } {
@@ -88,6 +92,8 @@ export function makeFake(): { deps: Deps; state: FakeState } {
     bookings: [],
     notifications: [],
     contacts: {},
+    location: null,
+    reviews: [],
   };
   const note = (method: string, arg?: unknown) => state.readCalls.push({ method, arg });
 
@@ -112,6 +118,14 @@ export function makeFake(): { deps: Deps; state: FakeState } {
     async openJobs(filter) {
       note("openJobs", filter);
       return state.jobs;
+    },
+    async jobLocation(jobId) {
+      note("jobLocation", jobId);
+      return state.location;
+    },
+    async reviews() {
+      note("reviews");
+      return state.reviews;
     },
     async employerJobs(userId, page: Page) {
       note("employerJobs", { userId, ...page });
@@ -165,6 +179,9 @@ export function makeFake(): { deps: Deps; state: FakeState } {
     accept_application: BOOKING_ID,
     cancel_booking: null,
     mark_notifications_read: 2,
+    save_job_location: null,
+    finish_booking: null,
+    submit_review: "55555555-5555-4555-8555-555555555555",
     get_applicant_signals: [
       {
         application_id: APP_ID,
@@ -182,6 +199,9 @@ export function makeFake(): { deps: Deps; state: FakeState } {
         availability_note: null,
         member_since: now,
         completed_jobs: 0,
+        no_show_count: 0,
+        review_count: 0,
+        avg_rating: null,
       },
     ],
   };

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "./api";
+import { useAuth } from "./auth";
 import type { Category, Locality } from "./types";
 
 interface ReferenceValue {
@@ -8,6 +9,8 @@ interface ReferenceValue {
   categories: Category[];
   localities: Locality[];
   categoryName(id: number): string;
+  /** The category name in the signed-in user's language (English, Hindi or Gujarati), falling back to English. */
+  categoryLabel(c: Category): string;
   localityName(id: number): string;
 }
 
@@ -24,6 +27,8 @@ export function ReferenceProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [localities, setLocalities] = useState<Locality[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
+  const { me } = useAuth();
+  const language = me?.profile.preferred_language ?? "en";
 
   useEffect(() => {
     let alive = true;
@@ -42,7 +47,8 @@ export function ReferenceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<ReferenceValue>(() => {
-    const cat = new Map(categories.map((c) => [c.id, c.name_en]));
+    const label = (c: Category) => (language === "hi" && c.name_hi) || (language === "gu" && c.name_gu) || c.name_en;
+    const cat = new Map(categories.map((c) => [c.id, label(c)]));
     const loc = new Map(localities.map((l) => [l.id, l.name]));
     return {
       ready: state === "ready",
@@ -50,9 +56,10 @@ export function ReferenceProvider({ children }: { children: ReactNode }) {
       categories,
       localities,
       categoryName: (id) => cat.get(id) ?? "Work",
+      categoryLabel: label,
       localityName: (id) => loc.get(id) ?? "Vadodara",
     };
-  }, [categories, localities, state]);
+  }, [categories, localities, state, language]);
 
   return <ReferenceContext.Provider value={value}>{children}</ReferenceContext.Provider>;
 }

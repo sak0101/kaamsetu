@@ -49,9 +49,10 @@ select is(
     where n.nspname = 'public'
       and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')),
   array['accept_application', 'apply_to_job', 'cancel_booking', 'cancel_job', 'create_job',
-        'get_applicant_signals', 'mark_notifications_read', 'reject_application',
-        'save_contact', 'save_worker_profile', 'update_profile', 'withdraw_application'],
-  'public schema exposes exactly the 12 API functions');
+        'finish_booking', 'get_applicant_signals', 'mark_notifications_read', 'reject_application',
+        'save_contact', 'save_job_location', 'save_worker_profile', 'submit_review', 'update_profile',
+        'withdraw_application'],
+  'public schema exposes exactly the 15 API functions');
 
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -81,7 +82,8 @@ select is(
   (select array_agg(p.proname::text order by p.proname)
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute')),
-  array['app_role', 'can_view_user', 'has_active_booking_with', 'has_applied', 'has_booking_on_job', 'owns_job'],
+  array['app_role', 'can_view_user', 'has_active_booking_with', 'has_applied', 'has_booking_on_job',
+        'has_live_booking_on_job', 'owns_job'],
   'authenticated may execute only the RLS helpers in private (no trigger or internal functions)');
 
 select is(
@@ -129,8 +131,8 @@ select is(
   (select array_agg(c.relname::text order by c.relname)
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r' and has_table_privilege('authenticated', c.oid, 'SELECT')),
-  array['bookings', 'contact_details', 'job_applications', 'jobs', 'localities', 'notifications',
-        'work_categories', 'worker_categories', 'worker_profiles'],
+  array['booking_reviews', 'bookings', 'contact_details', 'job_applications', 'job_locations', 'jobs', 'localities',
+        'notifications', 'work_categories', 'worker_categories', 'worker_profiles'],
   'authenticated has table-level SELECT on exactly the browser-readable tables');
 
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'is_suspended', 'SELECT'),

@@ -59,12 +59,36 @@ export const pageQuery = {
   offset: queryInt(0, 10_000).default(0),
 };
 
+const istDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-21").refine((s) => !Number.isNaN(Date.parse(`${s}T00:00:00Z`)), "Not a real date");
+
 export const browseJobsQuery = z
   .object({
     locality_id: queryInt(1, 32767).optional(),
     category_id: queryInt(1, 32767).optional(),
+    /** Words to look for in the title, description or employer name. */
+    q: z.string().trim().max(80).optional(),
+    /** Inclusive IST date range (a single day: the same value twice). */
+    date_from: istDate.optional(),
+    date_to: istDate.optional(),
+    min_hours: queryInt(0, 336).optional(),
+    max_hours: queryInt(1, 336).optional(),
     ...pageQuery,
   })
+  .strict()
+  .refine((q) => !q.date_from || !q.date_to || q.date_from <= q.date_to, { path: ["date_to"], message: "date_to must not be before date_from" })
+  .refine((q) => q.min_hours === undefined || q.max_hours === undefined || q.min_hours <= q.max_hours, { path: ["max_hours"], message: "max_hours must not be below min_hours" });
+
+export const jobLocationBody = z
+  .object({
+    /** Blank clears the address. */
+    address_line: z.string().trim().max(200),
+    landmark: z.string().trim().max(100).nullable().optional(),
+  })
+  .strict();
+
+export const finishBookingBody = z.object({ outcome: z.enum(["completed", "no_show"]) }).strict();
+export const reviewBody = z
+  .object({ rating: z.number().int().min(1).max(5), comment: z.string().trim().max(300).nullable().optional() })
   .strict();
 
 export const pageOnlyQuery = z.object({ ...pageQuery }).strict();
@@ -92,6 +116,12 @@ export function parse<S extends z.ZodType>(schema: S, data: unknown): z.infer<S>
   }
   return result.data;
 }
+
+export const aiWorkerDraftBody = z
+  .object({
+    text: z.string().trim().min(10, "Tell us a little about yourself and your work.").max(1500, "Please keep it under 1500 characters."),
+  })
+  .strict();
 
 export const aiDraftBody = z
   .object({

@@ -1,19 +1,7 @@
 import { useState } from "react";
+import { imageFileFor } from "../lib/jobImage";
 
-/** Locally stored photos in public/images (credits in public/images/credits.json). */
-export const FILE_BY_SLUG: Record<string, string> = {
-  event_help: "cat-event.jpg",
-  loading_unloading: "cat-loading.jpg",
-  furniture_shifting: "cat-furniture.jpg",
-  cleaning: "cat-cleaning.jpg",
-  construction_helper: "cat-construction.jpg",
-  painting_helper: "cat-painting.jpg",
-  gardening: "cat-gardening.jpg",
-  // No suitable licensed photo, so this one is an in-repo illustration in the brand palette (no credit needed).
-  packing: "cat-packing.svg",
-};
-
-/** Brand-coloured fallback tile (used when a photo is missing), so there is never a broken-image icon. */
+/** Brand-coloured fallback tile (used when a picture is missing), so there is never a broken-image icon. */
 const TILE: Record<string, string> = {
   event_help: "bg-terracotta text-ink",
   loading_unloading: "bg-ink text-white",
@@ -26,13 +14,28 @@ const TILE: Record<string, string> = {
 };
 
 /**
- * A photo for a work category. The photo is decorative (the category is always named in the text beside it),
- * so it has an empty alt. If the file can't load, a coloured tile with the category initial is shown instead.
+ * The picture for a type of work. Pass the job's `title` and `description` for "Event help" jobs and the picture
+ * matches the kind of event (wedding, catering, exhibition, religious, corporate). The picture is decorative (the
+ * category is always named in the text beside it), so it has an empty alt. If the file can't load, a coloured tile
+ * with the category initial is shown instead.
  */
-export function CategoryImage({ slug, name, className = "" }: { slug: string | undefined; name: string; className?: string }) {
-  const [failed, setFailed] = useState(false);
-  const file = slug ? FILE_BY_SLUG[slug] : undefined;
-  if (!file || failed) {
+export function CategoryImage({
+  slug,
+  name,
+  className = "",
+  title,
+  description,
+}: {
+  slug: string | undefined;
+  name: string;
+  className?: string;
+  title?: string;
+  description?: string;
+}) {
+  const file = imageFileFor(slug, title, description);
+  // Remember WHICH file failed, so a card whose job text changes is not stuck on the fallback.
+  const [failedFile, setFailedFile] = useState<string | null>(null);
+  if (!file || failedFile === file) {
     return (
       <div aria-hidden="true" className={`flex items-center justify-center text-4xl font-extrabold ${TILE[slug ?? ""] ?? "bg-line text-ink"} ${className}`}>
         {name.trim().charAt(0).toUpperCase() || "K"}
@@ -40,10 +43,8 @@ export function CategoryImage({ slug, name, className = "" }: { slug: string | u
     );
   }
   return (
-    <div className={`relative overflow-hidden bg-line ${className}`}>
-      <img src={`/images/${file}`} alt="" width={320} height={220} loading="lazy" decoding="async" onError={() => setFailed(true)} className="h-full w-full object-cover" />
-      {/* A soft indigo wash at the bottom edge ties photos of different styles together. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink/35 to-transparent" />
+    <div className={`overflow-hidden bg-line ${className}`}>
+      <img src={`/images/${file}`} alt="" width={320} height={220} loading="lazy" decoding="async" onError={() => setFailedFile(file)} className="h-full w-full object-cover" />
     </div>
   );
 }

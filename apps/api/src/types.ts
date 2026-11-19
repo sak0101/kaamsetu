@@ -16,6 +16,9 @@ export const RPC_NAMES = [
   "cancel_booking",
   "mark_notifications_read",
   "get_applicant_signals",
+  "save_job_location",
+  "finish_booking",
+  "submit_review",
 ] as const;
 export type RpcName = (typeof RPC_NAMES)[number];
 
@@ -78,6 +81,36 @@ export interface JobRow {
   created_at: string;
 }
 
+/** Exact address of a job. Row-level security only returns it to the owning employer and to a worker with a live booking. */
+export interface JobLocationRow {
+  address_line: string;
+  landmark: string | null;
+}
+
+/** A review the caller wrote or received. */
+export interface ReviewRow {
+  id: string;
+  booking_id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+/** Server-side job search filters (all optional, combined with AND). */
+export interface JobSearch {
+  localityId?: number;
+  categoryId?: number;
+  /** Words that must each appear in the title, description or employer name. */
+  q?: string;
+  /** Inclusive IST calendar dates, YYYY-MM-DD. */
+  dateFrom?: string;
+  dateTo?: string;
+  minHours?: number;
+  maxHours?: number;
+}
+
 export interface ApplicationRow {
   id: string;
   job_id: string;
@@ -131,7 +164,11 @@ export interface Reads {
   workerProfile(userId: string): Promise<{ profile: WorkerProfileRow | null; category_ids: number[] }>;
   categories(): Promise<CategoryRow[]>;
   localities(): Promise<LocalityRow[]>;
-  openJobs(filter: Page & { localityId?: number; categoryId?: number }): Promise<JobRow[]>;
+  openJobs(filter: Page & JobSearch): Promise<JobRow[]>;
+  /** The job's address, only if row-level security lets the caller see it. */
+  jobLocation(jobId: string): Promise<JobLocationRow | null>;
+  /** Reviews the caller wrote or received (row-level security). */
+  reviews(): Promise<ReviewRow[]>;
   employerJobs(userId: string, page: Page): Promise<JobRow[]>;
   job(id: string): Promise<JobRow | null>;
   jobsByIds(ids: string[]): Promise<JobRow[]>;

@@ -34,6 +34,9 @@ const applicant = (over: Partial<Applicant> = {}): Applicant => ({
   availability_note: null,
   member_since: "2026-11-01T00:00:00+00:00",
   completed_jobs: 0,
+  no_show_count: 0,
+  review_count: 0,
+  avg_rating: null,
   fit: {
     percent: 100,
     label: "Strong match",

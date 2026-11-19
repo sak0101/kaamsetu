@@ -59,6 +59,24 @@ If any of the four SMTP variables is missing the form is disabled safely: the AP
 
 **Not verified:** whether GoDaddy's Node.js hosting allows outbound SMTP on the chosen port, and that the mailbox accepts authenticated SMTP from the server. Test with a real submission after deploying; if outbound SMTP is blocked, switch the sender to an HTTPS email API (the route and tests stay the same; only `mailer.ts` changes). Messages are not stored: if sending fails the visitor is shown the fallback address.
 
+## Release checklist (nothing here has been done; it needs your credentials)
+
+Do these in order. The app now depends on migrations 13 to 16: **deploying the app before migrating the database breaks job search filters, addresses, completion and reviews.**
+
+**1. Supabase (hosted project), in the dashboard or with the CLI that you are logged in to**
+1. Apply migrations through `20261120100004_matching_job_notifications.sql` in filename order (for example `supabase db push` after `supabase link`; review the pending list first). They are additive; the only replaced function is `get_applicant_signals` (re-granted inside the migration).
+2. Authentication, URL configuration: Site URL = the production origin; Redirect URLs include `https://<domain>/login` and `https://<domain>/reset-password`.
+3. Authentication, SMTP: custom SMTP with a KaamSetu sender (the built-in mailer is test-only and limited to team addresses), SPF/DKIM on the domain, and a higher email rate limit. Paste the branded Confirm-signup and Reset-password templates from `supabase/templates/`. Keep "Confirm email" enabled and the minimum password length at 8. Details: [auth-email-setup.md](auth-email-setup.md). **Do not run `supabase config push`** without reviewing it: it would push the local `config.toml` (including `site_url = http://localhost:5173`).
+4. Confirm Realtime is enabled for the `notifications` table (migration 11 adds it to the publication).
+
+**2. GoDaddy (Node.js hosting) environment variables**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`; `NODE_ENV=production`; optional `ANTHROPIC_API_KEY` (+ `ANTHROPIC_MODEL`, default `claude-opus-5-5`); contact form `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (+ `CONTACT_TO`); `TRUST_PROXY_HOPS` only after confirming how GoDaddy forwards client IPs. `PORT` is supplied by GoDaddy.
+
+**3. Build and verify locally**: `npm test`, `npm run typecheck`, `npm run package`, `npm run verify:deploy`. Check `kaamsetu-deploy.zip` is under the size budget, the generated `package.json` lists `nodemailer`, and the ZIP contains no `.env`, source maps or `node_modules` (the packaging script fails if it does).
+
+**4. Upload and smoke-test on the real platform**: sign up with a real address (confirmation email arrives from your sender), forgot-password round trip, post a job, apply and accept with two accounts, send a message through the contact form (confirms outbound SMTP works from GoDaddy; if it is blocked, only `apps/api/src/mailer.ts` needs to change to an HTTPS email API).
+
+**5. Demo data** (optional): see [demo-data.md](demo-data.md).
+
 ## Not yet verified
 
 Hello-world phase verifies the ZIP locally only. Nothing has been uploaded to GoDaddy. Still to confirm on the real platform: how env vars are entered, what HTTPS/domain steps are needed, whether outbound SMTP to Titan works, and the app-root/entry-point settings.

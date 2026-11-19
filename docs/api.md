@@ -30,6 +30,7 @@ Database contract: [database.md](database.md). Nothing here is deployed.
 | `POST /api/jobs` | employer | `create_job` → `201 { id }` |
 | `GET /api/jobs?locality_id&category_id&limit&offset` | worker | reads open, future jobs (+ employer name) |
 | `GET /api/employer/jobs?limit&offset` | employer | reads own jobs |
+| `GET /api/jobs?locality_id&category_id&q&date_from&date_to&min_hours&max_hours&limit&offset` | worker | reads under RLS, **all filters applied by the server over every open job**: `q` = words that must each appear in the title, description or employer name (at most 4 words; filter-grammar characters are neutralised); `date_from`/`date_to` = inclusive IST dates (`YYYY-MM-DD`); `min_hours`/`max_hours` use the generated `jobs.duration_minutes` column (migration 13) and are referenced only when given. Never returns an address. |
 | `GET /api/jobs/:id` | any | reads under RLS (404 if not visible) |
 | `POST /api/jobs/:id/cancel` `{reason?}` | employer | `cancel_job` → 204 |
 | `POST /api/jobs/:id/applications` `{message?}` | worker | `apply_to_job` → `201 { application_id }` |
@@ -38,14 +39,20 @@ Database contract: [database.md](database.md). Nothing here is deployed.
 | `GET /api/jobs/:id/applicants` | employer | `get_applicant_signals` (facts + a transparent fit: see docs/ai-and-voice.md) |
 | `POST /api/applications/:id/accept` | employer | `accept_application` → `201 { booking_id }` |
 | `POST /api/applications/:id/reject` `{reason?}` | employer | `reject_application` → 204 |
+| `GET /api/jobs/:id/location` | any | reads `job_locations` under RLS → `{ location: { address_line, landmark } \| null }`. Only the owning employer and a worker with a LIVE booking (confirmed / in progress, job not ended) get a value; everyone else gets `null` (indistinguishable from "no address added"). |
+| `PUT /api/jobs/:id/location` `{address_line, landmark?}` | employer | `save_job_location` (own, non-cancelled jobs; blank address clears it; address 5–200 chars, landmark ≤ 100) → `{ location }` |
 | `GET /api/me/bookings` | any | reads under RLS |
+| `POST /api/bookings/:id/finish` `{outcome: "completed" \| "no_show"}` | employer | `finish_booking` (only after the job has started) → 204 |
+| `POST /api/bookings/:id/review` `{rating 1–5, comment?}` | worker or employer | `submit_review` (completed bookings only, one per person; the reviewee is derived from the booking) → `201 { id }` |
+| `GET /api/me/reviews` | any | reads reviews you wrote or received (RLS) |
 | `POST /api/bookings/:id/cancel` `{reason?}` | worker or employer | `cancel_booking` → 204 |
 | `GET /api/notifications?unread=true&limit&offset` | any | reads |
 | `POST /api/notifications/read` `{ids?}` | any | `mark_notifications_read` → `{ updated }` |
 | `GET /api/me/contact` | any | reads own phone (row-level security) → `{ phone }` |
 | `PUT /api/me/contact` `{phone}` | any | `save_contact` (Indian mobile, stored as +91…; `null` clears) |
 | `GET /api/bookings/:id/contact` | worker or employer | reads the OTHER side's phone, only while the booking is confirmed or in progress → `{ name, phone, shared }` |
-| `GET /api/ai/status` | employer | `{ available }`: whether AI drafting is configured |
+| `GET /api/ai/status` | any | `{ available }`: whether AI drafting is configured |
+| `POST /api/ai/worker-profile-draft` `{text}` | worker | Claude (server-side). Returns a profile DRAFT only (`draft`, `assumptions`, `questions`, `missing_fields`); nothing is saved. The worker applies it to the form, edits it and saves through `PUT /api/me/worker-profile`. Shares the 12-per-10-minutes AI limit. |
 | `POST /api/ai/job-draft` `{text, answers?}` | employer | Claude (server-side). Returns a DRAFT only (`draft`, `assumptions`, `questions`, `ready`); it never creates a job. 503 `ai_not_configured` without a key; 12 drafts / 10 min / user |
 
 Times are ISO-8601 **with an offset** (send IST as `+05:30`); money is integer paise (INR, max 5,000,000).

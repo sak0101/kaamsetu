@@ -68,3 +68,50 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
   if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`;
   return formatDate(iso);
 }
+
+// ------------------------------------------------------------------ urgency, duration, directions
+
+export interface Urgency {
+  label: string;
+  /** "urgent" = today; "soon" = tomorrow; "week" = within the next few days. */
+  level: "urgent" | "soon" | "week";
+}
+
+const dayNumber = (isoDate: string) => Math.round(new Date(`${isoDate}T00:00:00Z`).getTime() / 86_400_000);
+
+/**
+ * How soon a job starts, in IST calendar days: Today, Tomorrow, or "This week" (2 to 6 days away).
+ * Returns null for jobs that already started or are further away. A job starting within 3 hours of now is "Starting soon".
+ */
+export function urgencyOf(startsAtIso: string, now: Date = new Date()): Urgency | null {
+  const start = new Date(startsAtIso);
+  if (start.getTime() <= now.getTime()) return null;
+  const diff = dayNumber(istDate(startsAtIso)) - dayNumber(todayIst(now));
+  if (diff === 0) {
+    return start.getTime() - now.getTime() <= 3 * 3_600_000 ? { label: "Starting soon", level: "urgent" } : { label: "Today", level: "urgent" };
+  }
+  if (diff === 1) return { label: "Tomorrow", level: "soon" };
+  if (diff >= 2 && diff <= 6) return { label: "This week", level: "week" };
+  return null;
+}
+
+/** "45 min", "4 hours", "5 h 30 min", "1 day 2 hours": how long the work lasts. */
+export function formatDuration(startIso: string, endIso: string): string {
+  const minutes = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000));
+  if (minutes < 60) return `${minutes} min`;
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  if (days > 0) return `${days} ${days === 1 ? "day" : "days"}${hours ? ` ${hours} ${hours === 1 ? "hour" : "hours"}` : ""}`;
+  if (mins === 0) return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  return `${hours} h ${mins} min`;
+}
+
+/**
+ * A Google Maps directions link for an address. It opens the Maps app or website on the worker's own device, which asks
+ * for their position themselves: KaamSetu needs no API key and never sees or tracks their location.
+ */
+export function directionsUrl(address: string, localityName: string): string {
+  const destination = `${address}, ${localityName}, Vadodara, Gujarat`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}

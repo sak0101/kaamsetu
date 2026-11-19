@@ -238,10 +238,13 @@ select throws_ok($$select * from public.get_applicant_signals('00000000-0000-000
 select throws_ok($$select * from public.get_applicant_signals('00000000-0000-0000-0000-000000000012'::uuid, current_setting('t.sjob')::uuid)$$, 'KS403', 'wrong_role', 'worker cannot read applicant evidence');
 reset role;
 
-select doesnt_match(pg_get_function_result('public.get_applicant_signals(uuid,uuid)'::regprocedure),
-  '(?i)(rating|score|reliab|rank|predict|quality)', 'applicant evidence exposes no rating, score, reliability or prediction column');
+-- Migration 15 adds genuine review FACTS (review_count, avg_rating from completed bookings, null when none). There
+-- is still no computed score, reliability figure, rank, quality or prediction column.
+-- Strict: the only column allowed to contain "rating" is exactly avg_rating (a plain average of genuine reviews).
+select doesnt_match(replace(pg_get_function_result('public.get_applicant_signals(uuid,uuid)'::regprocedure), 'avg_rating numeric', ''),
+  '(?i)(rating|score|reliab|rank|predict|quality)', 'applicant evidence exposes no rating, score, reliability, rank or prediction column except the plain avg_rating fact');
 select is(pg_get_function_result('public.get_applicant_signals(uuid,uuid)'::regprocedure),
-  'TABLE(application_id uuid, worker_id uuid, worker_name text, application_status text, applied_at timestamp with time zone, message text, category_match boolean, locality_match text, years_experience smallint, has_booking_conflict boolean, bio text, skills text[], availability_note text, member_since timestamp with time zone, completed_jobs integer)',
+  'TABLE(application_id uuid, worker_id uuid, worker_name text, application_status text, applied_at timestamp with time zone, message text, category_match boolean, locality_match text, years_experience smallint, has_booking_conflict boolean, bio text, skills text[], availability_note text, member_since timestamp with time zone, completed_jobs integer, no_show_count integer, review_count integer, avg_rating numeric)',
   'applicant evidence columns are exactly the documented set');
 
 -- suspended actors are refused

@@ -5,11 +5,14 @@ import { rankApplicants, type ApplicantRow } from "./fit";
 import { createRateLimiter } from "./rateLimit";
 import {
   aiDraftBody,
+  aiWorkerDraftBody,
   applyBody,
   browseJobsQuery,
   cancelBody,
   contactBody,
   createJobBody,
+  finishBookingBody,
+  jobLocationBody,
   idParams,
   markReadBody,
   notificationsQuery,
@@ -17,6 +20,7 @@ import {
   parse,
   profileUpdateBody,
   rejectBody,
+  reviewBody,
   workerProfileBody,
 } from "./schemas";
 import type { Deps, JobRow, Reads, RpcName } from "./types";
@@ -124,7 +128,7 @@ export function createApiRouter(deps: Deps): Router {
 
   // ------------------------------------------------------------------ AI drafting
   // The AI only DRAFTS. Publishing is a separate explicit POST /api/jobs after the organiser confirms.
-  r.get("/ai/status", auth, employer, (_req, res) => {
+  r.get("/ai/status", auth, (_req, res) => {
     res.json({ available: Boolean(deps.ai) });
   });
 
@@ -139,9 +143,31 @@ export function createApiRouter(deps: Deps): Router {
     const result = await deps.ai.draftJob(
       { text: body.text, answers: body.answers ?? [] },
       {
-        categories: categories.map((c) => ({ id: c.id, slug: c.slug, name: c.name_en })),
+        categories: categories.map((c) => ({ id: c.id, slug: c.slug, name: c.name_en, name_hi: c.name_hi, name_gu: c.name_gu })),
+        language: getAuth(res).profile.preferred_language,
         localities: localities.map((l) => ({ id: l.id, name: l.name })),
         now: new Date(),
+      },
+    );
+    res.json(result);
+  });
+
+  // A worker describes themselves in their own words; the AI drafts structured profile fields. Nothing is saved here:
+  // the worker reviews and edits the draft and saves it through the ordinary PUT /api/me/worker-profile.
+  r.post("/ai/worker-profile-draft", auth, worker, async (req, res) => {
+    const body = parse(aiWorkerDraftBody, req.body);
+    if (!deps.ai) {
+      throw new ApiError(503, "ai_not_configured", "Describing yourself isn't set up on this server yet. You can still fill in the form yourself.");
+    }
+    const { reads, userId, profile } = getAuth(res);
+    aiLimiter.hit(userId);
+    const [categories, localities] = await Promise.all([reads.categories(), reads.localities()]);
+    const result = await deps.ai.draftWorkerProfile(
+      { text: body.text },
+      {
+        categories: categories.map((c) => ({ id: c.id, slug: c.slug, name: c.name_en, name_hi: c.name_hi, name_gu: c.name_gu })),
+        localities: localities.map((l) => ({ id: l.id, name: l.name })),
+        language: profile.preferred_language,
       },
     );
     res.json(result);
@@ -170,6 +196,11 @@ export function createApiRouter(deps: Deps): Router {
     const jobs = await getAuth(res).reads.openJobs({
       localityId: q.locality_id,
       categoryId: q.category_id,
+      q: q.q || undefined,
+      dateFrom: q.date_from,
+      dateTo: q.date_to,
+      minHours: q.min_hours,
+      maxHours: q.max_hours,
       limit: q.limit,
       offset: q.offset,
     });
@@ -194,6 +225,20 @@ export function createApiRouter(deps: Deps): Router {
     const [withEmployer] = await withEmployers(reads, [job]);
     const myApplication = role === "worker" ? await reads.applicationForJob(id, userId) : null;
     res.json({ job: withEmployer, my_application: myApplication });
+  });
+
+  // The exact address. Row-level security returns it only to the owning employer and to a worker with a live
+  // booking on the job; everyone else (applicants included) gets `null`, exactly like "no address added".
+  r.get("/jobs/:id/location", auth, async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    res.json({ location: await getAuth(res).reads.jobLocation(id) });
+  });
+
+  r.put("/jobs/:id/location", auth, employer, async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const body = parse(jobLocationBody, req.body);
+    await callRpc(deps, res, "save_job_location", { p_job_id: id, p_address_line: body.address_line, p_landmark: body.landmark ?? null });
+    res.json({ location: await getAuth(res).reads.jobLocation(id) });
   });
 
   r.post("/jobs/:id/cancel", auth, employer, async (req, res) => {
@@ -270,6 +315,27 @@ export function createApiRouter(deps: Deps): Router {
     const body = parse(cancelBody, req.body ?? {});
     await callRpc(deps, res, "cancel_booking", { p_booking_id: id, p_reason: body.reason ?? null });
     res.status(204).end();
+  });
+
+  // The employer records what happened (only after the job has started); the database enforces the rules.
+  r.post("/bookings/:id/finish", auth, employer, async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const body = parse(finishBookingBody, req.body);
+    await callRpc(deps, res, "finish_booking", { p_booking_id: id, p_outcome: body.outcome });
+    res.status(204).end();
+  });
+
+  // Either party of a completed booking rates the other once. The reviewee is derived from the booking, never supplied.
+  r.post("/bookings/:id/review", auth, async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const body = parse(reviewBody, req.body);
+    const reviewId = await callRpc(deps, res, "submit_review", { p_booking_id: id, p_rating: body.rating, p_comment: body.comment ?? null });
+    res.status(201).json({ id: reviewId });
+  });
+
+  // Reviews the caller wrote or received (row-level security).
+  r.get("/me/reviews", auth, async (_req, res) => {
+    res.json({ reviews: await getAuth(res).reads.reviews() });
   });
 
   // ------------------------------------------------------------ notifications

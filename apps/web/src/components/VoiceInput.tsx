@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useOptionalAuth } from "../lib/auth";
 import { Button } from "./ui";
 
 // Minimal typings for the Web Speech API (not in every TypeScript DOM lib).
@@ -35,8 +36,19 @@ export function getRecognitionCtor(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+export type SpeechLang = "en-IN" | "hi-IN" | "gu-IN";
+export const SPEECH_LANGUAGES: { code: SpeechLang; label: string }[] = [
+  { code: "en-IN", label: "English" },
+  { code: "hi-IN", label: "हिन्दी (Hindi)" },
+  { code: "gu-IN", label: "ગુજરાતી (Gujarati)" },
+];
+/** The speaking language that matches the user's saved language (English when none). */
+export const speechLangFor = (preferred: "en" | "hi" | "gu" | undefined): SpeechLang => (preferred === "hi" ? "hi-IN" : preferred === "gu" ? "gu-IN" : "en-IN");
+
 export function describeSpeechError(code: string): string {
   switch (code) {
+    case "language-not-supported":
+      return "This browser can't recognise that language by voice. Choose another language, or just type instead.";
     case "not-allowed":
     case "service-not-allowed":
       return "Microphone access was blocked. Allow it in your browser's address bar, or just type instead.";
@@ -71,6 +83,9 @@ export function VoiceInput({
   disabled?: boolean;
 }) {
   const Ctor = getRecognitionCtor();
+  const me = useOptionalAuth()?.me ?? null;
+  // Which language to listen for. Starts from the user's saved language; they can change it per request.
+  const [lang, setLang] = useState<SpeechLang>(() => speechLangFor(me?.profile.preferred_language));
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState("");
   const [error, setError] = useState("");
@@ -104,7 +119,7 @@ export function VoiceInput({
     setError("");
     setInterim("");
     const rec = new Ctor();
-    rec.lang = "en-IN";
+    rec.lang = lang;
     rec.continuous = false;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
@@ -153,6 +168,20 @@ export function VoiceInput({
             {label}
           </Button>
         )}
+        <label className="flex items-center gap-2 text-sm">
+          <span className="font-semibold">Speak in</span>
+          <select
+            value={lang}
+            disabled={listening}
+            onChange={(e) => setLang(e.target.value as SpeechLang)}
+            className="min-h-11 rounded-lg border-2 border-line bg-white px-2 text-base text-ink"
+            aria-label="Speaking language"
+          >
+            {SPEECH_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+        </label>
         <span role="status" aria-live="polite" className="text-sm font-semibold">
           {listening && (
             <span className="inline-flex items-center gap-2 text-danger-dark">

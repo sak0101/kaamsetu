@@ -9,10 +9,13 @@ import type {
   EmployerName,
   JobRow,
   LocalityRow,
+  JobLocationRow,
+  JobSearch,
   NotificationRow,
   Page,
   ProfileRow,
   Reads,
+  ReviewRow,
   RpcName,
   WorkerProfileRow,
 } from "./types";
@@ -27,11 +30,32 @@ const JOB_COLS =
 const APPLICATION_COLS = "id,job_id,worker_id,status,status_reason,message,decided_at,created_at";
 const BOOKING_COLS =
   "id,job_id,application_id,worker_id,employer_id,agreed_pay_paise,status,cancelled_by,cancelled_at,cancel_reason,completed_at,created_at";
+const REVIEW_COLS = "id,booking_id,reviewer_id,reviewee_id,rating,comment,created_at";
 const NOTIFICATION_COLS = "id,type,entity_type,entity_id,payload,read_at,created_at";
 
 function unwrap<T>(res: { data: T | null; error: { code?: string; message: string } | null }): T | null {
   if (res.error) throw mapDbError(res.error);
   return res.data;
+}
+
+/** Next calendar day of a YYYY-MM-DD string (pure date arithmetic, no time zone involved). */
+export function nextDay(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Words safe to embed in a PostgREST filter: every character that carries meaning in the filter grammar or in
+ * LIKE patterns is replaced by a space, so user text can never add conditions. At most 4 words of 2+ characters.
+ */
+export function searchWords(text: string | undefined): string[] {
+  if (!text) return [];
+  return text
+    .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, " ") // \p{M}: Hindi and Gujarati vowel signs and the virama are combining marks
+    .split(/\s+/)
+    .filter((w) => w.length >= 2)
+    .slice(0, 4);
 }
 
 const range = (p: Page) => [p.offset, p.offset + p.limit - 1] as const;
@@ -65,7 +89,7 @@ export function createReads(client: SupabaseClient): Reads {
       ) ?? []) as LocalityRow[];
     },
 
-    async openJobs({ localityId, categoryId, ...page }) {
+    async openJobs({ localityId, categoryId, q: text, dateFrom, dateTo, minHours, maxHours, ...page }: Page & JobSearch) {
       let q = client
         .from("jobs")
         .select(JOB_COLS)
@@ -75,7 +99,28 @@ export function createReads(client: SupabaseClient): Reads {
         .order("id", { ascending: true });
       if (localityId !== undefined) q = q.eq("locality_id", localityId);
       if (categoryId !== undefined) q = q.eq("category_id", categoryId);
+      // IST calendar days, inclusive: [dateFrom 00:00, dateTo + 1 day 00:00).
+      if (dateFrom) q = q.gte("starts_at", `${dateFrom}T00:00:00+05:30`);
+      if (dateTo) q = q.lt("starts_at", `${nextDay(dateTo)}T00:00:00+05:30`);
+      // Duration filters use the generated column from migration 13, so they are only referenced when asked for.
+      if (minHours !== undefined) q = q.gte("duration_minutes", minHours * 60);
+      if (maxHours !== undefined) q = q.lte("duration_minutes", maxHours * 60);
+      // Every word must match the title, the description or the employer's name (AND across words, OR across fields).
+      for (const word of searchWords(text)) {
+        const employers = (unwrap(await client.from("profiles").select("id").or(`full_name.ilike.%${word}%,org_name.ilike.%${word}%`).limit(50)) ?? []) as { id: string }[];
+        const parts = [`title.ilike.%${word}%`, `description.ilike.%${word}%`];
+        if (employers.length) parts.push(`employer_id.in.(${employers.map((e) => e.id).join(",")})`);
+        q = q.or(parts.join(","));
+      }
       return (unwrap(await q.range(...range(page))) ?? []) as JobRow[];
+    },
+
+    async jobLocation(jobId) {
+      return unwrap(await client.from("job_locations").select("address_line,landmark").eq("job_id", jobId).maybeSingle()) as JobLocationRow | null;
+    },
+
+    async reviews() {
+      return (unwrap(await client.from("booking_reviews").select(REVIEW_COLS).order("created_at", { ascending: false }).limit(200)) ?? []) as ReviewRow[];
     },
 
     async employerJobs(userId, page) {

@@ -305,7 +305,7 @@ describe("AI configuration", () => {
 });
 
 describe("POST /api/ai/job-draft", () => {
-  const fakeAi: AiService = { model: "test-model", draftJob: vi.fn() };
+  const fakeAi: AiService = { model: "test-model", draftJob: vi.fn(), draftWorkerProfile: vi.fn() };
   const draftJob = fakeAi.draftJob as ReturnType<typeof vi.fn>;
   let fake = makeFake();
   let app: Awaited<ReturnType<typeof startApp>>;
@@ -394,7 +394,7 @@ describe("POST /api/ai/job-draft", () => {
 
   it("reports availability", async () => {
     expect((await app.call("GET", "/api/ai/status", { token: E })).json).toEqual({ available: true });
-    expect((await app.call("GET", "/api/ai/status", { token: W })).status).toBe(403);
+    expect((await app.call("GET", "/api/ai/status", { token: W })).json).toEqual({ available: true }); // workers use it for the profile helper
   });
 
   it("answers 503 ai_not_configured (and says how to carry on) when no API key is configured", async () => {

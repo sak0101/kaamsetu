@@ -17,11 +17,11 @@
 
 ## Applicant fit (explanation, not a quality score)
 
-`apps/api/src/fit.ts`. Weights: type of work 0.30, locality 0.20, experience 0.10. **Missing locality or experience is excluded and the remaining weights renormalised**, never treated as zero; an explicit "0 years" is real data. Reviews, attendance and reliability are **not used** because none exist. `completed_jobs` is a real count from bookings (0 for new workers) and is shown, not scored. An overlapping booking is a flag that sorts a worker last without changing the percentage. The card says why, in plain words, and the employer decides.
+`apps/api/src/fit.ts`. Weights: type of work 0.30, locality 0.20, experience 0.10. **Missing locality or experience is excluded and the remaining weights renormalised**, never treated as zero; an explicit "0 years" is real data. Reviews and no-shows (from completed bookings, migration 15) are shown as plain facts but are **never part of the percentage**, so having none costs nothing. `completed_jobs` is a real count from bookings (0 for new workers) and is shown, not scored. An overlapping booking is a flag that sorts a worker last without changing the percentage. The card says why, in plain words, and the employer decides.
 
 ## Photos
 
-Eight locally stored photographs in `apps/web/public/images/` from Wikimedia Commons under CC BY / CC BY-SA, with `credits.json` and a public `/credits` page linked from the footers. Tests check every referenced file exists, is a valid JPEG, is under 400 KB and is credited under an allowed licence. Missing photos (packing, shop) fall back to a coloured tile, never a broken image.
+Superseded: there are no longer any photographs. See "Pictures" below (one consistent set of original illustrations); `/credits` explains this and would list any third-party photograph that is ever added.
 
 ## Verifying locally
 
@@ -33,3 +33,20 @@ npm test                                                           # unit tests 
 npm run test:integration -w @kaamsetu/api                          # real Express + real database
 npm run e2e -w @kaamsetu/web                                       # real Edge browser, both roles, AI via local stub
 ```
+
+
+## Languages (English, Hindi, Gujarati, Hinglish and mixed)
+
+- **Job drafting** (`apps/api/src/ai.ts`): the prompt tells Claude to read all four ways of writing, to write the text the organiser will edit (title, description, assumptions, questions) in the language they used (their profile language breaks ties for mixed text), and to keep fixed values in English or digits (category and locality from the allowed lists, ISO dates, 24-hour times, numbers). Hindi and Gujarati category names are included in the prompt. Missing details stay missing and are asked about; the server still re-validates everything and the organiser must tick the confirmation before publishing.
+- **Voice search** (`apps/web/src/lib/voiceQuery.ts`) is still rule-based (no AI): it now understands Hindi, Gujarati and Hinglish words for each type of work, days (`कल`, `કાલે`, `kal`, `aaj`, `parso`, weekday names), localities in Devanagari, Gujarati script and common Latin spellings, and Gujarati endings attached to words (`ગોત્રીમાં`).
+- **Voice input** (`VoiceInput.tsx`) has a "Speak in" picker: English (`en-IN`), Hindi (`hi-IN`), Gujarati (`gu-IN`), defaulting to the user's saved language (set on the profile pages). It stays push-to-talk. If the browser cannot recognise a language it says so and typing still works. Support for `gu-IN` varies by browser.
+- **Work-type names** are shown in the user's language from the existing `name_hi` / `name_gu` columns, falling back to English.
+- **Native-speaker review is required** for the Hindi and Gujarati labels, keyword lists and place-name spellings before they are relied on.
+
+## AI-assisted worker profile ("Describe yourself")
+
+`POST /api/ai/worker-profile-draft` (worker only, rate limited with the other AI calls). The prompt forbids inventing or embellishing experience, years, qualifications, skills, equipment or availability; years only when a number is stated; the bio uses only facts given and no praise. The server validates the structured output (real category and locality lists, 0 to 60 years, 2 to 40 character skills, at most 8 skills and 5 categories, 120-character availability note), drops anything out of range and turns it into a question. The profile page shows "Here's what I understood" with guesses and missing details; **only after "Fill my profile with this" are fields copied into the form, each marked "Filled by AI: please check", and nothing is saved until the worker presses Save** (the ordinary profile endpoint). Manual entry is unchanged and is the fallback when the AI is off or fails. Limit of what is guaranteed: the AI cannot be proven never to add a claim; the prompt, the validation and the mandatory review are the controls.
+
+## Pictures
+
+One consistent set of original SVG illustrations (`apps/web/public/images`): eight types of work and five kinds of event (wedding, catering, exhibition, religious, corporate) plus a general event picture. The event kind is chosen from the job's own title and description by keyword rules (`lib/jobImage.ts`, multilingual) only for "Event help" jobs; there is no AI call and no network request. A missing file falls back to a coloured tile.

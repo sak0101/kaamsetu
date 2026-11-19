@@ -116,7 +116,27 @@ export interface Applicant {
   availability_note: string | null;
   member_since: string;
   completed_jobs: number;
+  /** Facts from completed bookings (0 / null for every new worker; never a penalty). */
+  no_show_count: number;
+  review_count: number;
+  avg_rating: number | null;
   fit: Fit;
+}
+
+/** The exact address of a job. The API only returns it to the owning employer and to a worker with a live booking. */
+export interface JobLocation {
+  address_line: string;
+  landmark: string | null;
+}
+
+export interface Review {
+  id: string;
+  booking_id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
 }
 
 /** Transparent fit summary from the API: facts only; missing data is excluded, never counted as zero. */

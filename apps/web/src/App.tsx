@@ -6,7 +6,9 @@ import { EmployerJobDetail } from "./pages/EmployerJobDetail";
 import { EmployerJobs } from "./pages/EmployerJobs";
 import { EmployerProfile } from "./pages/EmployerProfile";
 import { Credits } from "./pages/Credits";
+import { ForgotPassword } from "./pages/ForgotPassword";
 import { Landing } from "./pages/Landing";
+import { ResetPassword } from "./pages/ResetPassword";
 import { Login } from "./pages/Login";
 import { NewJob } from "./pages/NewJob";
 import { NewJobAi } from "./pages/NewJobAi";
@@ -26,6 +28,8 @@ export function AppRoutes() {
         <Route index element={<Landing />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
         <Route path="credits" element={<Credits />} />
       </Route>
 

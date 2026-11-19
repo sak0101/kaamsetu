@@ -36,7 +36,11 @@ const to24 = (h, m, ap) => {
 function extract(system, user) {
   const today = /Today is \w+, (\d{4}-\d{2}-\d{2})/.exec(system)?.[1];
   const categories = Object.fromEntries(
-    [...(/Allowed categories \(value: meaning\): (.*)/.exec(system)?.[1] ?? "").split("; ")].map((p) => p.split(": ")),
+    // "slug: English name / Hindi name / Gujarati name; ..." (the stub only needs the English name)
+    [...(/Allowed categories \(value: [^)]*\): (.*)/.exec(system)?.[1] ?? "").split("; ")].map((p) => {
+      const [slug, names = ""] = p.split(": ");
+      return [slug, names.split(" / ")[0]];
+    }),
   );
   const localities = (/Allowed localities: (.*)/.exec(system)?.[1] ?? "").split(", ").filter(Boolean);
   const text = user.toLowerCase();

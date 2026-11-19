@@ -4,12 +4,14 @@ import type {
   Booking,
   Category,
   Job,
+  JobLocation,
   Locality,
   MeResponse,
   NotificationItem,
   PageParams,
   PayType,
   Profile,
+  Review,
   WorkerProfile,
 } from "./types";
 
@@ -113,6 +115,21 @@ export interface AiDraftResult {
   missing_fields: string[];
 }
 
+export interface AiWorkerDraftResult {
+  draft: {
+    bio: string | null;
+    years_experience: number | null;
+    locality_id: number | null;
+    category_ids: number[];
+    skills: string[];
+    availability_note: string | null;
+    is_available: boolean | null;
+  };
+  assumptions: { field: string; text: string }[];
+  questions: { field: string; question: string }[];
+  missing_fields: string[];
+}
+
 export interface WorkerProfileInput {
   bio: string | null;
   years_experience: number | null;
@@ -121,6 +138,19 @@ export interface WorkerProfileInput {
   category_ids: number[];
   skills: string[];
   availability_note: string | null;
+}
+
+/** Server-side job search filters. Everything is optional and combined with AND. */
+export interface JobSearchParams {
+  locality_id?: number;
+  category_id?: number;
+  /** Words that must each appear in the title, description or employer name. */
+  q?: string;
+  /** Inclusive IST dates, YYYY-MM-DD. */
+  date_from?: string;
+  date_to?: string;
+  min_hours?: number;
+  max_hours?: number;
 }
 
 /** One function per real endpoint in docs/api.md. Nothing else is called. */
@@ -135,6 +165,7 @@ export const api = {
     request<{ profile: Profile }>("PUT", "/me/profile", { body: b }),
   saveWorkerProfile: (b: WorkerProfileInput) => request<{ worker: WorkerProfile }>("PUT", "/me/worker-profile", { body: b }),
 
+  aiWorkerDraft: (b: { text: string }) => request<AiWorkerDraftResult>("POST", "/ai/worker-profile-draft", { body: b }),
   aiStatus: () => request<{ available: boolean }>("GET", "/ai/status"),
   aiJobDraft: (b: { text: string; answers?: { question: string; answer: string }[] }) =>
     request<AiDraftResult>("POST", "/ai/job-draft", { body: b }),
@@ -143,12 +174,24 @@ export const api = {
   localities: () => request<{ localities: Locality[] }>("GET", "/localities"),
 
   createJob: (b: CreateJobInput) => request<{ id: string }>("POST", "/jobs", { body: b }),
-  browseJobs: (p: PageParams & { locality_id?: number; category_id?: number }) =>
+  browseJobs: (p: PageParams & JobSearchParams) =>
     request<{ jobs: Job[]; page: { limit: number; offset: number } }>("GET", "/jobs", {
-      query: { ...page(p), locality_id: p.locality_id, category_id: p.category_id },
+      query: {
+        ...page(p),
+        locality_id: p.locality_id,
+        category_id: p.category_id,
+        q: p.q?.trim() || undefined,
+        date_from: p.date_from,
+        date_to: p.date_to,
+        min_hours: p.min_hours,
+        max_hours: p.max_hours,
+      },
     }),
   employerJobs: (p?: PageParams) => request<{ jobs: Job[]; page: { limit: number; offset: number } }>("GET", "/employer/jobs", { query: page(p) }),
   job: (id: string) => request<{ job: Job; my_application: Application | null }>("GET", `/jobs/${id}`),
+  jobLocation: (jobId: string) => request<{ location: JobLocation | null }>("GET", `/jobs/${jobId}/location`),
+  saveJobLocation: (jobId: string, b: { address_line: string; landmark?: string | null }) =>
+    request<{ location: JobLocation | null }>("PUT", `/jobs/${jobId}/location`, { body: b }),
   cancelJob: (id: string, reason?: string) => request<void>("POST", `/jobs/${id}/cancel`, { body: reason ? { reason } : {} }),
 
   apply: (jobId: string, message?: string) =>
@@ -167,6 +210,9 @@ export const api = {
     request<{ name: string | null; phone: string | null; shared: boolean }>("GET", `/bookings/${bookingId}/contact`),
 
   myBookings: (p?: PageParams) => request<{ bookings: Booking[] }>("GET", "/me/bookings", { query: page(p) }),
+  finishBooking: (id: string, outcome: "completed" | "no_show") => request<void>("POST", `/bookings/${id}/finish`, { body: { outcome } }),
+  submitReview: (id: string, b: { rating: number; comment?: string | null }) => request<{ id: string }>("POST", `/bookings/${id}/review`, { body: b }),
+  myReviews: () => request<{ reviews: Review[] }>("GET", "/me/reviews"),
   cancelBooking: (id: string, reason?: string) => request<void>("POST", `/bookings/${id}/cancel`, { body: reason ? { reason } : {} }),
 
   notifications: (p?: PageParams & { unread?: boolean }) =>

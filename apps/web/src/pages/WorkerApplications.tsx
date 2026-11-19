@@ -86,7 +86,7 @@ export function WorkerApplications() {
                   {app.status === "pending" && (
                     <Button variant="secondary" loading={busyId === app.id} onClick={() => void withdraw(app)}>Withdraw</Button>
                   )}
-                  {app.status === "accepted" && <Link to="/worker/bookings" className="font-semibold underline">View booking</Link>}
+                  {app.status === "accepted" && <Link to="/worker/bookings" className="inline-flex min-h-11 items-center font-semibold underline">View booking</Link>}
                 </>
               );
               return (

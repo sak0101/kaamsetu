@@ -51,7 +51,7 @@ export function NotificationsPage() {
                   <p className="text-sm text-ink-soft">{relativeTime(n.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Link to={to} onClick={() => unread && void mark([n.id])} className="font-semibold underline">View</Link>
+                  <Link to={to} onClick={() => unread && void mark([n.id])} className="inline-flex min-h-11 items-center font-semibold underline">View</Link>
                   {unread && <Button variant="ghost" onClick={() => void mark([n.id])}>Mark read</Button>}
                 </div>
               </li>

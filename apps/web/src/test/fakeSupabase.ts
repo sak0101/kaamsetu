@@ -19,6 +19,10 @@ class FakeSupabase {
   /** signUp result: true = a session is returned immediately (email confirmation off). */
   signUpReturnsSession = false;
   signUpCalls: unknown[] = [];
+  resetCalls: { email: string; redirectTo?: string }[] = [];
+  resetError: string | null = null;
+  updateUserError: string | null = null;
+  updatedPasswords: string[] = [];
 
   reset() {
     this.session = null;
@@ -29,10 +33,20 @@ class FakeSupabase {
     this.signUpError = null;
     this.signUpReturnsSession = false;
     this.signUpCalls = [];
+    this.resetCalls = [];
+    this.resetError = null;
+    this.updateUserError = null;
+    this.updatedPasswords = [];
   }
 
   private emit(event: string) {
     this.listeners.forEach((l) => l(event, this.session));
+  }
+
+  /** Simulate Supabase turning a recovery link into a session (fires PASSWORD_RECOVERY). */
+  recover(userId = "recovering-user") {
+    this.signInAs(userId);
+    this.emit("PASSWORD_RECOVERY");
   }
 
   /** Simulate an existing signed-in session before the app mounts. */
@@ -66,6 +80,15 @@ class FakeSupabase {
           this.emit("SIGNED_IN");
         }
         return { data: { session: this.signUpReturnsSession ? this.session : null }, error: null };
+      }),
+      resetPasswordForEmail: vi.fn(async (email: string, opts?: { redirectTo?: string }) => {
+        this.resetCalls.push({ email, redirectTo: opts?.redirectTo });
+        return this.resetError ? { data: null, error: { message: this.resetError } } : { data: {}, error: null };
+      }),
+      updateUser: vi.fn(async ({ password }: { password: string }) => {
+        if (this.updateUserError) return { data: null, error: { message: this.updateUserError } };
+        this.updatedPasswords.push(password);
+        return { data: {}, error: null };
       }),
       signOut: vi.fn(async () => {
         this.session = null;

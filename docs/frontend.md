@@ -1,6 +1,6 @@
 # Frontend (React + Vite + Tailwind) — Phase 1
 
-Mobile-first, English-only MVP. Talks only to the Express API in [api.md](api.md).
+Mobile-first. English, Hindi and Gujarati for work-type names, voice input and AI drafting; the rest of the interface text is English. Talks only to the Express API in [api.md](api.md).
 
 ## Data rules
 
@@ -13,16 +13,17 @@ Mobile-first, English-only MVP. Talks only to the Express API in [api.md](api.md
 
 | Route | Role | Screen |
 |---|---|---|
-| `/` | public | Landing (how it works, illustration clearly marked as not a real listing) |
+| `/` | public | Landing (how it works, sample listing clearly marked as an illustration), footer contact form |
 | `/login`, `/signup` | public | Supabase Auth; sign-up sends `{ role, full_name }` as metadata |
-| `/worker` | worker | Find work: filter by type/locality (defaults to the worker's area), text search over loaded jobs |
-| `/worker/jobs/:id` | worker | Job detail, apply with message, withdraw, re-apply |
+| `/forgot-password`, `/reset-password` | public | Password recovery (see [auth-email-setup.md](auth-email-setup.md)) |
+| `/worker` | worker | Find work: server-side search by words, type, locality (defaults to the worker's area), day (Today / Tomorrow / next 7 days / a date) and how long; urgency and duration on every card |
+| `/worker/jobs/:id` | worker | Job detail, apply with message, withdraw, re-apply; exact address and Google Maps directions once booked |
 | `/worker/applications` | worker | Applications with status/reason, withdraw |
-| `/worker/bookings`, `/employer/bookings` | both | Bookings, cancel with reason (rules mirror the database) |
-| `/worker/profile` | worker | Name, area, up to 5 work types, optional experience, availability |
+| `/worker/bookings`, `/employer/bookings` | both | Bookings, cancel with reason, employer records completed / no-show once started, ratings both ways |
+| `/worker/profile` | worker | "Describe yourself" (AI draft, reviewed before saving), name, language, area, up to 5 work types, optional experience, skills, availability |
 | `/employer` | employer | My jobs with booked counts and waiting-applicant counts |
-| `/employer/jobs/new` | employer | Post a job (IST date/times, pay in ₹ → paise) |
-| `/employer/jobs/:id` | employer | Job + applicants (evidence only), accept/decline, cancel job |
+| `/employer/jobs/new`, `/employer/jobs/new/ai` | employer | Post a job (IST date/times, pay in ₹ → paise, optional address and landmark), or describe it in words |
+| `/employer/jobs/:id` | employer | Job, address, applicants (facts and fit), accept/decline, cancel job |
 | `/employer/profile` | employer | Name and business |
 | `/notifications` | both | List, mark read; bell badge + Realtime toast |
 

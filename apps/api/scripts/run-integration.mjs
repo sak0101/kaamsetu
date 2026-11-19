@@ -33,11 +33,12 @@ function localEnv() {
 
 function cleanup() {
   const sql = `
-    delete from public.notifications where user_id in (select id from auth.users where email like '%@api-it.invalid');
-    delete from public.bookings where employer_id in (select id from auth.users where email like '%@api-it.invalid');
-    delete from public.job_applications where job_id in (select id from public.jobs where employer_id in (select id from auth.users where email like '%@api-it.invalid'));
-    delete from public.jobs where employer_id in (select id from auth.users where email like '%@api-it.invalid');
-    delete from auth.users where email like '%@api-it.invalid';`;
+    delete from public.notifications where user_id in (select id from auth.users where email like '%@api-it.invalid' or email like '%@kaamsetu.invalid');
+    delete from public.booking_reviews where reviewer_id in (select id from auth.users where email like '%@api-it.invalid' or email like '%@kaamsetu.invalid');
+    delete from public.bookings where employer_id in (select id from auth.users where email like '%@api-it.invalid' or email like '%@kaamsetu.invalid');
+    delete from public.job_applications where job_id in (select id from public.jobs where employer_id in (select id from auth.users where email like '%@api-it.invalid' or email like '%@kaamsetu.invalid'));
+    delete from public.jobs where employer_id in (select id from auth.users where email like '%@api-it.invalid' or email like '%@kaamsetu.invalid');
+    delete from auth.users where email like '%@api-it.invalid' or email like '%@kaamsetu.invalid';`;
   execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-U", "postgres", "-d", "postgres", "-q"], { input: sql, stdio: ["pipe", "ignore", "inherit"] });
 }
 

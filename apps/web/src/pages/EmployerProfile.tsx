@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Alert, Button, ErrorAlert, PageHeader, TextField } from "../components/ui";
+import { Alert, Button, ErrorAlert, PageHeader, SelectField, TextField } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { serverFieldErrors } from "../lib/forms";
@@ -7,6 +7,7 @@ import { serverFieldErrors } from "../lib/forms";
 export function EmployerProfile() {
   const { me, reloadMe } = useAuth();
   const [fullName, setFullName] = useState(me?.profile.full_name ?? "");
+  const [language, setLanguage] = useState<"en" | "hi" | "gu">(me?.profile.preferred_language ?? "en");
   const [orgName, setOrgName] = useState(me?.profile.org_name ?? "");
   const [phone, setPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export function EmployerProfile() {
 
     setBusy(true);
     try {
-      await api.updateProfile({ full_name: name, preferred_language: me?.profile.preferred_language ?? "en", org_name: orgName.trim() || null });
+      await api.updateProfile({ full_name: name, preferred_language: language, org_name: orgName.trim() || null });
       if ((phone.trim() || null) !== (savedPhone ? savedPhone.replace(/^\+91/, "") : null)) {
         const res = await api.saveContact(phone.trim() || null);
         setSavedPhone(res.phone);
@@ -71,6 +72,11 @@ export function EmployerProfile() {
         {saved && <Alert tone="success">Profile saved.</Alert>}
         {formError != null && <ErrorAlert error={formError} />}
         <TextField label="Your name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} error={errors.full_name} />
+        <SelectField label="Language" hint="Used for work-type names and as the default for voice input. Hindi and Gujarati names are being reviewed by native speakers." value={language} onChange={(e) => setLanguage(e.target.value as "en" | "hi" | "gu")}>
+          <option value="en">English</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+          <option value="gu">ગુજરાતી (Gujarati)</option>
+        </SelectField>
         <TextField label="Business or organisation (optional)" autoComplete="organization" hint="Shown next to your name, e.g. “Shree Traders”." value={orgName} onChange={(e) => setOrgName(e.target.value)} error={errors.org_name} />
         <TextField
           label="Phone number (optional)"

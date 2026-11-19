@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { formatPay, formatRange } from "../lib/format";
+import { formatDuration, formatPay, formatRange, urgencyOf } from "../lib/format";
 import { jobDisplay } from "../lib/labels";
 import { useReference } from "../lib/reference";
 import type { Job } from "../lib/types";
@@ -19,27 +19,34 @@ export function JobCard({ job, to, showEmployer = true, footer }: { job: Job; to
   const slug = categories.find((c) => c.id === job.category_id)?.slug;
   const status = jobDisplay(job);
   const left = Math.max(job.workers_needed - job.positions_filled, 0);
+  const urgency = job.status === "open" ? urgencyOf(job.starts_at) : null;
 
   const pct = job.workers_needed > 0 ? Math.min(100, Math.round((job.positions_filled / job.workers_needed) * 100)) : 0;
 
   return (
     <article className="overflow-hidden rounded-xl border border-line bg-paper shadow-sm transition-shadow hover:shadow-md sm:grid sm:grid-cols-[12rem_1fr]">
-      <CategoryImage slug={slug} name={categoryName(job.category_id)} className="h-36 w-full sm:h-full sm:min-h-44" />
+      <CategoryImage slug={slug} name={categoryName(job.category_id)} title={job.title} description={job.description} className="h-36 w-full sm:h-full sm:min-h-44" />
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <p className="text-sm font-bold uppercase tracking-wide text-terracotta-darker">
             {categoryName(job.category_id)} · {localityName(job.locality_id)}
           </p>
-          <Badge tone={status.tone}>{status.label}</Badge>
+          <span className="flex flex-wrap items-center gap-2">
+            {urgency && <Badge tone={urgency.level === "urgent" ? "danger" : urgency.level === "soon" ? "warning" : "neutral"}>{urgency.label}</Badge>}
+            <Badge tone={status.tone}>{status.label}</Badge>
+          </span>
         </div>
         <h2 className="mt-1 text-xl sm:text-2xl">
-          <Link to={to} className="underline decoration-terracotta decoration-2 underline-offset-4 hover:text-terracotta-darker">
+          <Link to={to} className="inline-block py-2 underline decoration-terracotta decoration-2 underline-offset-4 hover:text-terracotta-darker">
             {job.title}
           </Link>
         </h2>
         {showEmployer && job.employer !== undefined && <p className="mt-0.5 text-ink-soft">{employerLabel(job)}</p>}
         <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1.4fr_1fr_1fr]">
-          <Fact label="When">{formatRange(job.starts_at, job.ends_at)}</Fact>
+          <Fact label="When">
+            {formatRange(job.starts_at, job.ends_at)}
+            <span className="block text-sm font-normal text-ink-soft">Lasts {formatDuration(job.starts_at, job.ends_at)}</span>
+          </Fact>
           <div>
             <dt className="text-sm text-ink-soft">Pay</dt>
             <dd className="text-lg font-extrabold text-terracotta-darker">{formatPay(job.pay_amount_paise, job.pay_type)}</dd>

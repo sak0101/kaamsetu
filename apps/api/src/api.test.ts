@@ -63,6 +63,11 @@ const ENDPOINTS: { method: string; path: string; role: "e" | "w" | "any"; body?:
   { method: "POST", path: `/api/bookings/${BOOKING_ID}/cancel`, role: "any", body: {} },
   { method: "GET", path: "/api/notifications", role: "any" },
   { method: "POST", path: "/api/notifications/read", role: "any", body: {} },
+  { method: "GET", path: `/api/jobs/${JOB_ID}/location`, role: "any" },
+  { method: "PUT", path: `/api/jobs/${JOB_ID}/location`, role: "e", body: { address_line: "12 Race Course Circle" } },
+  { method: "POST", path: `/api/bookings/${BOOKING_ID}/finish`, role: "e", body: { outcome: "completed" } },
+  { method: "POST", path: `/api/bookings/${BOOKING_ID}/review`, role: "any", body: { rating: 5 } },
+  { method: "GET", path: "/api/me/reviews", role: "any" },
 ];
 
 function validJob(over: Record<string, unknown> = {}) {
@@ -452,14 +457,14 @@ describe("endpoint behaviour", () => {
     }
   });
 
-  it("applicants endpoint returns facts plus a transparent fit, with no rating or reliability", async () => {
+  it("applicants endpoint returns facts plus a transparent fit, with no score or reliability figure", async () => {
     const res = await app.call("GET", `/api/jobs/${JOB_ID}/applicants`, { token: E });
     expect(res.status).toBe(200);
     expect(lastRpc()).toEqual({ fn: "get_applicant_signals", args: { p_job_id: JOB_ID, p_actor: EMPLOYER_ID } });
     const a = res.json.applicants[0];
     expect(Object.keys(a).sort()).toEqual(
       ["application_id", "application_status", "applied_at", "availability_note", "bio", "category_match", "completed_jobs", "fit",
-       "has_booking_conflict", "locality_match", "member_since", "message", "skills", "worker_id", "worker_name", "years_experience"].sort(),
+       "has_booking_conflict", "locality_match", "member_since", "message", "no_show_count", "review_count", "avg_rating", "skills", "worker_id", "worker_name", "years_experience"].sort(),
     );
     expect(a.fit).toMatchObject({ percent: 100, label: "Strong match", signals_used: ["category", "locality"] });
     expect(a.fit.signals_excluded).toEqual(expect.arrayContaining(["experience", "reviews", "reliability"]));

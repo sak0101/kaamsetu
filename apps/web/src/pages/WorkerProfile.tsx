@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
-import { Alert, Button, Card, ErrorAlert, PageHeader, SelectField, TextAreaField, TextField } from "../components/ui";
-import { ApiError, api } from "../lib/api";
+import { WorkerAiHelper } from "../components/WorkerAiHelper";
+import { Alert, Button, Card, ErrorAlert, PageHeader, SelectField, SourceBadge, TextAreaField, TextField } from "../components/ui";
+import { ApiError, api, type AiWorkerDraftResult } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { serverFieldErrors } from "../lib/forms";
 import { workerCompleteness } from "../lib/profile";
@@ -36,10 +37,11 @@ export function CompletenessMeter({ percent, missing }: { percent: number; missi
 
 export function WorkerProfilePage() {
   const { me, reloadMe } = useAuth();
-  const { categories, localities, ready } = useReference();
+  const { categories, localities, ready, categoryLabel } = useReference();
   const worker = me?.worker;
 
   const [fullName, setFullName] = useState(me?.profile.full_name ?? "");
+  const [language, setLanguage] = useState<"en" | "hi" | "gu">(me?.profile.preferred_language ?? "en");
   const [phone, setPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
   const [bio, setBio] = useState(worker?.bio ?? "");
@@ -50,6 +52,8 @@ export function WorkerProfilePage() {
   const [skillDraft, setSkillDraft] = useState("");
   const [availabilityNote, setAvailabilityNote] = useState(worker?.availability_note ?? "");
   const [available, setAvailable] = useState(worker?.is_available ?? true);
+  // Fields that were filled from the "Describe yourself" draft: they carry a "please check" badge until saved.
+  const [aiFlags, setAiFlags] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<unknown>(null);
   const [saved, setSaved] = useState(false);
@@ -71,6 +75,24 @@ export function WorkerProfilePage() {
       alive = false;
     };
   }, []);
+
+  /** Copies what the worker said into the editable form. Only fields the draft actually has are touched. */
+  function applyAiDraft(d: AiWorkerDraftResult["draft"]) {
+    const flags = new Set<string>();
+    if (d.locality_id) { setLocalityId(String(d.locality_id)); flags.add("locality"); }
+    if (d.category_ids.length) { setCategoryIds(d.category_ids.slice(0, MAX_CATEGORIES)); flags.add("categories"); }
+    if (d.years_experience !== null) { setYears(String(d.years_experience)); flags.add("years"); }
+    if (d.skills.length) {
+      setSkills((prev) => [...prev, ...d.skills.filter((s) => !prev.some((x) => x.toLowerCase() === s.toLowerCase()))].slice(0, MAX_SKILLS));
+      flags.add("skills");
+    }
+    if (d.availability_note) { setAvailabilityNote(d.availability_note.slice(0, 120)); flags.add("availability"); }
+    if (d.bio) { setBio(d.bio.slice(0, 500)); flags.add("bio"); }
+    if (d.is_available !== null) { setAvailable(d.is_available); flags.add("available"); }
+    setAiFlags(flags);
+    setSaved(false);
+  }
+  const ai = (key: string) => (aiFlags.has(key) ? <SourceBadge kind="ai" /> : undefined);
 
   function toggleCategory(id: number) {
     setCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : prev.length >= MAX_CATEGORIES ? prev : [...prev, id]));
@@ -128,8 +150,8 @@ export function WorkerProfilePage() {
 
     setBusy(true);
     try {
-      if (name !== me?.profile.full_name) {
-        await api.updateProfile({ full_name: name, preferred_language: me?.profile.preferred_language ?? "en", org_name: null });
+      if (name !== me?.profile.full_name || language !== (me?.profile.preferred_language ?? "en")) {
+        await api.updateProfile({ full_name: name, preferred_language: language, org_name: null });
       }
       await api.saveWorkerProfile({
         bio: bio.trim() || null,
@@ -144,6 +166,7 @@ export function WorkerProfilePage() {
         const res = await api.saveContact(phone.trim() || null);
         setSavedPhone(res.phone);
       }
+      setAiFlags(new Set());
       await reloadMe();
       setSaved(true);
     } catch (err) {
@@ -167,11 +190,20 @@ export function WorkerProfilePage() {
           <CompletenessMeter percent={completeness.percent} missing={completeness.items.filter((i) => !i.done)} />
         </div>
       )}
+      <div className="mb-5">
+        <WorkerAiHelper onApply={applyAiDraft} />
+      </div>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 rounded-xl border border-line bg-paper p-5">
+        {aiFlags.size > 0 && <Alert tone="info" title="Filled from what you said">Check each marked box and change anything that isn't right. Nothing is saved until you press “Save profile”.</Alert>}
         {saved && <Alert tone="success">Profile saved.</Alert>}
         {formError != null && <ErrorAlert error={formError} />}
 
         <TextField label="Full name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} error={errors.full_name} />
+        <SelectField label="Language" hint="Used for work-type names and as the default for voice input. Hindi and Gujarati names are being reviewed by native speakers." value={language} onChange={(e) => setLanguage(e.target.value as "en" | "hi" | "gu")}>
+          <option value="en">English</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+          <option value="gu">ગુજરાતી (Gujarati)</option>
+        </SelectField>
 
         <TextField
           label="Phone number (optional)"
@@ -185,7 +217,7 @@ export function WorkerProfilePage() {
           error={errors.phone}
         />
 
-        <SelectField label="Area you work in" required value={localityId} onChange={(e) => setLocalityId(e.target.value)} error={errors.locality_id} disabled={!ready}>
+        <SelectField label="Area you work in" required badge={ai("locality")} value={localityId} onChange={(e) => setLocalityId(e.target.value)} error={errors.locality_id} disabled={!ready}>
           <option value="">Choose a locality</option>
           {localities.map((l) => (
             <option key={l.id} value={l.id}>{l.name}</option>
@@ -194,7 +226,7 @@ export function WorkerProfilePage() {
 
         <fieldset aria-describedby="cat-hint" className="flex flex-col gap-2">
           <legend className="text-base font-semibold">
-            Work you do <span aria-hidden="true" className="text-danger">*</span>
+            Work you do <span aria-hidden="true" className="text-danger">*</span> {ai("categories")}
           </legend>
           <p id="cat-hint" className="text-sm text-ink-soft">Choose up to {MAX_CATEGORIES}. ({categoryIds.length} selected)</p>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -203,7 +235,7 @@ export function WorkerProfilePage() {
               return (
                 <label key={c.id} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border-2 px-3 ${checked ? "border-ink bg-white" : "border-line bg-white/60"}`}>
                   <input type="checkbox" checked={checked} disabled={!checked && categoryIds.length >= MAX_CATEGORIES} onChange={() => toggleCategory(c.id)} className="h-5 w-5 accent-terracotta-dark" />
-                  {c.name_en}
+                  {categoryLabel(c)}
                 </label>
               );
             })}
@@ -213,6 +245,7 @@ export function WorkerProfilePage() {
 
         <TextField
           label="Years of experience"
+          badge={ai("years")}
           type="number"
           inputMode="numeric"
           min={0}
@@ -224,14 +257,14 @@ export function WorkerProfilePage() {
         />
 
         <fieldset className="flex flex-col gap-2" aria-describedby="skills-hint">
-          <legend className="text-base font-semibold">Skills</legend>
+          <legend className="text-base font-semibold">Skills {ai("skills")}</legend>
           <p id="skills-hint" className="text-sm text-ink-soft">Up to {MAX_SKILLS}. Type a skill and press Enter, or tap a suggestion. ({skills.length} added)</p>
           {skills.length > 0 && (
             <ul className="flex flex-wrap gap-2" aria-label="Your skills">
               {skills.map((s) => (
                 <li key={s} className="inline-flex items-center gap-1 rounded-full border-2 border-ink bg-white py-1 pl-3 pr-1 font-semibold">
                   {s}
-                  <button type="button" aria-label={`Remove skill ${s}`} onClick={() => setSkills((p) => p.filter((x) => x !== s))} className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none hover:bg-cream">
+                  <button type="button" aria-label={`Remove skill ${s}`} onClick={() => setSkills((p) => p.filter((x) => x !== s))} className="flex h-11 w-11 items-center justify-center rounded-full text-lg leading-none hover:bg-cream">
                     ×
                   </button>
                 </li>
@@ -252,7 +285,7 @@ export function WorkerProfilePage() {
           </div>
           <div className="flex flex-wrap gap-2" aria-label="Skill suggestions">
             {SKILL_IDEAS.filter((s) => !skills.some((x) => x.toLowerCase() === s.toLowerCase())).map((s) => (
-              <button key={s} type="button" onClick={() => addSkill(s)} className="min-h-9 rounded-full border border-line bg-white px-3 text-sm hover:border-ink">
+              <button key={s} type="button" onClick={() => addSkill(s)} className="min-h-11 rounded-full border border-line bg-white px-3 text-sm hover:border-ink">
                 + {s}
               </button>
             ))}
@@ -260,14 +293,14 @@ export function WorkerProfilePage() {
           {errors.skills && <p role="alert" className="text-sm font-semibold text-danger">{errors.skills}</p>}
         </fieldset>
 
-        <TextField label="When are you available?" maxLength={120} placeholder="e.g. Evenings and weekends" hint="Optional, shown to employers." value={availabilityNote} onChange={(e) => setAvailabilityNote(e.target.value)} error={errors.availability_note} />
+        <TextField label="When are you available?" badge={ai("availability")} maxLength={120} placeholder="e.g. Evenings and weekends" hint="Optional, shown to employers." value={availabilityNote} onChange={(e) => setAvailabilityNote(e.target.value)} error={errors.availability_note} />
 
-        <TextAreaField label="About you (optional)" maxLength={500} hint="A few lines about your work and how you like to work." value={bio} onChange={(e) => setBio(e.target.value)} error={errors.bio} />
+        <TextAreaField label="About you (optional)" badge={ai("bio")} maxLength={500} hint="A few lines about your work and how you like to work." value={bio} onChange={(e) => setBio(e.target.value)} error={errors.bio} />
 
         <label className="flex min-h-11 cursor-pointer items-center gap-3">
           <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="h-5 w-5 accent-terracotta-dark" />
           <span>
-            <span className="font-semibold">I'm available for new work</span>
+            <span className="font-semibold">I'm available for new work {ai("available")}</span>
             <span className="block text-sm text-ink-soft">Turn this off to pause applications.</span>
           </span>
         </label>

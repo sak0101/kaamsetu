@@ -20,6 +20,9 @@ export interface JobFormValues {
   workers: string;
   payType: PayType | "";
   pay: string;
+  /** Optional exact address. Stored separately and shared only with the booked worker. */
+  address?: string;
+  landmark?: string;
 }
 
 /** Draft field names (shared with the AI draft) that can carry a source badge. */
@@ -28,8 +31,24 @@ export type FieldFlags = Partial<Record<FlagField, "ai" | "assumed" | "missing">
 
 export const EMPTY_JOB: JobFormValues = {
   categoryId: "", localityId: "", title: "", description: "", date: "", startTime: "09:00", endTime: "13:00",
-  endsNextDay: false, workers: "1", payType: "daily", pay: "",
+  endsNextDay: false, workers: "1", payType: "daily", pay: "", address: "", landmark: "",
 };
+
+/** The optional address, validated like the database does (5 to 200 characters; landmark up to 100). */
+export function buildLocation(v: JobFormValues): { location: { address_line: string; landmark: string | null } | null; errors: Record<string, string> } {
+  const address = (v.address ?? "").trim();
+  const landmark = (v.landmark ?? "").trim();
+  const errors: Record<string, string> = {};
+  if (!address) {
+    if (landmark) errors.address_line = "Add the address too, or clear the landmark.";
+    return { location: null, errors };
+  }
+  if (address.length < 5 || address.length > 200) errors.address_line = "Enter the address (5 to 200 characters).";
+  if (landmark.length > 100) errors.landmark = "Keep the landmark under 100 characters.";
+  return Object.keys(errors).length ? { location: null, errors } : { location: { address_line: address, landmark: landmark || null }, errors };
+}
+
+export type JobLocationInput = { address_line: string; landmark: string | null };
 
 /** YYYY-MM-DD plus one calendar day (pure date arithmetic, no timezone involved). */
 export function addOneDay(date: string): string {
@@ -114,7 +133,7 @@ export function JobForm({
   busy?: boolean;
   formError?: unknown;
   fieldErrors?: Record<string, string>;
-  onSubmit: (payload: CreateJobInput) => void | Promise<void>;
+  onSubmit: (payload: CreateJobInput, location: JobLocationInput | null) => void | Promise<void>;
 }) {
   const { categories, localities, ready } = useReference();
   const [values, setValues] = useState<JobFormValues>(initial);
@@ -131,13 +150,14 @@ export function JobForm({
     e.preventDefault();
     setConfirmError("");
     const { payload, errors: found } = buildJobPayload(values);
-    setErrors(found);
+    const loc = buildLocation(values);
+    setErrors({ ...found, ...loc.errors });
     if (confirmLabel && !confirmed) {
       setConfirmError("Please tick the box to confirm you've checked these details.");
       return;
     }
-    if (!payload) return;
-    await onSubmit(payload);
+    if (!payload || Object.keys(loc.errors).length) return;
+    await onSubmit(payload, loc.location);
   }
 
   return (
@@ -162,6 +182,15 @@ export function JobForm({
       </div>
 
       <TextAreaField label="What needs to be done" required maxLength={1000} rows={5} hint="Duties, heavy items, tools needed, anything workers should know." badge={badge("description")} value={values.description} onChange={(e) => set("description", e.target.value)} error={shown.description} />
+
+      <fieldset className="flex flex-col gap-4 rounded-lg border border-line bg-white p-4">
+        <legend className="px-1 text-base font-semibold">Where exactly? <span className="font-normal text-ink-soft">(optional)</span></legend>
+        <p className="-mt-2 text-sm text-ink-soft">
+          Workers see only the locality until you book them. The address is then shared with the booked worker alone, together with a Google Maps directions link.
+        </p>
+        <TextField label="Address" autoComplete="off" maxLength={200} placeholder="e.g. 12 Race Course Circle" value={values.address ?? ""} onChange={(e) => set("address", e.target.value)} error={shown.address_line} />
+        <TextField label="Landmark" autoComplete="off" maxLength={100} placeholder="e.g. Near the fountain" value={values.landmark ?? ""} onChange={(e) => set("landmark", e.target.value)} error={shown.landmark} />
+      </fieldset>
 
       <div className="grid gap-5 sm:grid-cols-3">
         <TextField label="Date" type="date" required min={todayIst()} badge={badge("date")} value={values.date} onChange={(e) => set("date", e.target.value)} error={shown.date} />
@@ -207,19 +236,30 @@ export function JobForm({
   );
 }
 
+/** The job is already posted by now, so a failure here must not look like the post failed. */
+export async function saveLocationQuietly(jobId: string, location: JobLocationInput): Promise<boolean> {
+  try {
+    await api.saveJobLocation(jobId, location);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function NewJob() {
   const navigate = useNavigate();
   const [formError, setFormError] = useState<unknown>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
-  async function publish(payload: CreateJobInput) {
+  async function publish(payload: CreateJobInput, location: JobLocationInput | null) {
     setFormError(null);
     setFieldErrors({});
     setBusy(true);
     try {
       const { id } = await api.createJob(payload);
-      navigate(`/employer/jobs/${id}`, { state: { created: true } });
+      const locationSaved = location ? await saveLocationQuietly(id, location) : true;
+      navigate(`/employer/jobs/${id}`, { state: { created: true, locationSaved } });
     } catch (err) {
       setFieldErrors(serverFieldErrors(err));
       setFormError(err);

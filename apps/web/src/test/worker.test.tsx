@@ -72,14 +72,21 @@ describe("browse jobs", () => {
     await waitFor(() => expect(f.callsTo("GET /api/jobs").at(-1)?.search).toBe("?limit=20&offset=0"));
   });
 
-  it("searches the loaded jobs by text", async () => {
-    installFetch({ ...baseRoutes("worker"), "GET /api/jobs": page([J1, J2]) });
+  it("searches ALL open jobs on the server (not just the loaded page), after a short pause in typing", async () => {
+    const f = installFetch({
+      ...baseRoutes("worker"),
+      "GET /api/jobs": ({ url }) => (url.searchParams.get("q") === "clean" ? page([J2]) : page([J1, J2])),
+    });
     renderApp("/worker");
     await screen.findByRole("link", { name: "Shift household goods" });
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Search"), "clean");
-    expect(screen.queryByRole("link", { name: "Shift household goods" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deep clean a flat" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Deep clean a flat" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("link", { name: "Shift household goods" })).not.toBeInTheDocument());
+    const searches = f.callsTo("GET /api/jobs").map((c) => new URLSearchParams(c.search).get("q"));
+    expect(searches.at(-1)).toBe("clean");
+    // typing 5 letters did not make 5 requests: the keystrokes were debounced into one search
+    expect(searches.filter((q) => q !== null && q !== "")).toEqual(["clean"]);
   });
 
   it("shows an empty state, and a filtered empty state with a way back", async () => {

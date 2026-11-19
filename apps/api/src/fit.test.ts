@@ -17,6 +17,9 @@ const base: ApplicantRow = {
   availability_note: null,
   member_since: "2026-11-01T00:00:00Z",
   completed_jobs: 0,
+  no_show_count: 0,
+  review_count: 0,
+  avg_rating: null,
 };
 const worker = (over: Partial<ApplicantRow>): ApplicantRow => ({ ...base, ...over });
 
@@ -64,6 +67,18 @@ describe("computeFit", () => {
     expect(newWorker.signals_used).not.toContain("reviews");
     expect(newWorker.notes.join(" ")).toMatch(/New to KaamSetu.*isn't held against them/);
     expect(experienced.reasons).toContain("Completed 12 jobs through KaamSetu");
+  });
+
+  it("shows genuine reviews and no-shows as facts, but they never change the percentage", () => {
+    const none = computeFit(worker({}));
+    const reviewed = computeFit(worker({ completed_jobs: 3, review_count: 3, avg_rating: 4.67 }));
+    const noShow = computeFit(worker({ no_show_count: 2 }));
+    expect(reviewed.percent).toBe(none.percent);
+    expect(noShow.percent).toBe(none.percent);
+    expect(reviewed.reasons).toContain("Rated 4.7 out of 5 from 3 reviews");
+    expect(noShow.notes).toContain("Recorded as a no-show 2 times by employers");
+    expect(none.reasons.join(" ")).not.toMatch(/Rated/);
+    expect(none.notes.join(" ")).not.toMatch(/no-show/);
   });
 
   it("only reports completed-job history that exists (singular/plural, nothing invented)", () => {

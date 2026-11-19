@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { JobCard, employerLabel } from "../components/JobCard";
+import { JobCard } from "../components/JobCard";
 import { VoiceInput } from "../components/VoiceInput";
 import { Alert, Button, Card, EmptyState, ErrorState, LoadingBlock, PageHeader, SelectField, TextField } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { formatRange, istDate } from "../lib/format";
+import { addDays, formatRange, todayIst } from "../lib/format";
 import { useNotifications } from "../lib/notifications";
 import { workerCompleteness } from "../lib/profile";
 import { useReference } from "../lib/reference";
@@ -29,6 +29,7 @@ function WorkerSummary() {
     .filter((b) => (b.status === "confirmed" || b.status === "in_progress") && b.job && new Date(b.job.ends_at) > now)
     .sort((a, b) => Date.parse(a.job!.starts_at) - Date.parse(b.job!.starts_at));
   const apps = applications.data?.applications ?? [];
+  const completedCount = (bookings.data?.bookings ?? []).filter((b) => b.status === "completed").length;
   const count = (s: string) => apps.filter((a) => a.status === s).length;
 
   return (
@@ -45,13 +46,14 @@ function WorkerSummary() {
           <ul className="mt-2 flex flex-col gap-2">
             {upcoming.slice(0, 3).map((b) => (
               <li key={b.id}>
-                <Link to="/worker/bookings" className="font-semibold underline">{b.job!.title}</Link>
+                <Link to="/worker/bookings" className="inline-flex min-h-11 items-center font-semibold underline">{b.job!.title}</Link>
                 <p className="text-sm text-ink-soft">{formatRange(b.job!.starts_at, b.job!.ends_at)}</p>
               </li>
             ))}
           </ul>
         )}
-        {upcoming.length > 3 && <p className="mt-2 text-sm"><Link to="/worker/bookings" className="font-semibold underline">See all {upcoming.length} bookings</Link></p>}
+        {completedCount > 0 && <p className="mt-2 text-sm text-ink-soft">Completed through KaamSetu: <strong>{completedCount}</strong> {completedCount === 1 ? "job" : "jobs"}</p>}
+        {upcoming.length > 3 && <p className="mt-2 text-sm"><Link to="/worker/bookings" className="inline-flex min-h-11 items-center font-semibold underline">See all {upcoming.length} bookings</Link></p>}
       </Card>
 
       <Card>
@@ -67,11 +69,14 @@ function WorkerSummary() {
             <li><strong>{count("rejected")}</strong> not selected</li>
           </ul>
         )}
-        <p className="mt-3 text-sm"><Link to="/worker/applications" className="font-semibold underline">See all applications</Link></p>
+        <p className="mt-3 text-sm"><Link to="/worker/applications" className="inline-flex min-h-11 items-center font-semibold underline">See all applications</Link></p>
       </Card>
     </section>
   );
 }
+
+/** Typing in the search box searches after this pause, so each keystroke is not a request. */
+const SEARCH_DEBOUNCE_MS = 350;
 
 interface Interpretation {
   said: string;
@@ -83,9 +88,30 @@ interface Interpretation {
   recognised: boolean;
 }
 
+type When = "" | "today" | "tomorrow" | "week";
+type Duration = "" | "short" | "medium" | "long";
+
+const WHEN_LABEL: Record<Exclude<When, "">, string> = { today: "Today", tomorrow: "Tomorrow", week: "Next 7 days" };
+const DURATION_LABEL: Record<Exclude<Duration, "">, string> = { short: "Up to 4 hours", medium: "4 to 8 hours", long: "8 hours or more" };
+const DURATION_HOURS: Record<Exclude<Duration, "">, { min_hours?: number; max_hours?: number }> = {
+  short: { max_hours: 4 },
+  medium: { min_hours: 4, max_hours: 8 },
+  long: { min_hours: 8 },
+};
+
+/** The inclusive IST date range for a "When" preset, or a single picked date. A picked date wins over a preset. */
+export function dateRangeFor(when: When, picked: string, now: Date = new Date()): { date_from?: string; date_to?: string } {
+  if (picked) return { date_from: picked, date_to: picked };
+  const today = todayIst(now);
+  if (when === "today") return { date_from: today, date_to: today };
+  if (when === "tomorrow") return { date_from: addDays(today, 1), date_to: addDays(today, 1) };
+  if (when === "week") return { date_from: today, date_to: addDays(today, 6) };
+  return {};
+}
+
 export function WorkerJobs() {
   const { me } = useAuth();
-  const { categories, localities } = useReference();
+  const { categories, localities, categoryLabel } = useReference();
   const { version } = useNotifications();
   const myLocality = me?.worker?.locality_id ?? null;
 
@@ -93,7 +119,11 @@ export function WorkerJobs() {
   const [localityId, setLocalityId] = useState<string>(myLocality ? String(myLocality) : "");
   const [categoryId, setCategoryId] = useState<string>("");
   const [dateFilter, setDateFilter] = useState("");
+  const [when, setWhen] = useState<When>("");
+  const [duration, setDuration] = useState<Duration>("");
+  // What the worker is typing, and what is actually searched (typing is debounced so every keystroke isn't a request).
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,8 +131,7 @@ export function WorkerJobs() {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const requestId = useRef(0);
-  // Bumped by "Show these jobs" so confirming always runs a fresh query, even when the
-  // server-side filters (type of work, locality) happen to equal the current ones.
+  // Bumped by "Show these jobs" so confirming always runs a fresh query, even when the filters happen to equal the current ones.
   const [searchRun, setSearchRun] = useState(0);
   const [searching, setSearching] = useState(false);
 
@@ -110,10 +139,21 @@ export function WorkerJobs() {
   const [question, setQuestion] = useState("");
   const [reading, setReading] = useState<Interpretation | null>(null);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setAppliedSearch(search), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  // Every filter is applied by the server, over ALL matching jobs (not just the page already loaded).
   const load = useCallback(
-    async (offset: number, replace: boolean) => {
+    async (offset: number, replace: boolean, quiet = false) => {
       const id = ++requestId.current;
-      replace ? setLoading(true) : setLoadingMore(true);
+      if (replace) {
+        setLoading(true);
+        if (!quiet) setSearching(true); // new filters: hide the old list behind the loader until the new results arrive
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
       try {
         const res = await api.browseJobs({
@@ -121,6 +161,9 @@ export function WorkerJobs() {
           offset,
           locality_id: localityId ? Number(localityId) : undefined,
           category_id: categoryId ? Number(categoryId) : undefined,
+          q: appliedSearch,
+          ...dateRangeFor(when, dateFilter),
+          ...(duration ? DURATION_HOURS[duration] : {}),
         });
         if (id !== requestId.current) return;
         setJobs((prev) => (replace ? res.jobs : [...prev, ...res.jobs]));
@@ -138,30 +181,35 @@ export function WorkerJobs() {
         }
       }
     },
-    [localityId, categoryId],
+    [localityId, categoryId, appliedSearch, when, dateFilter, duration],
   );
 
+  // A changed filter (or "Show these jobs") shows the loader; a new notification refreshes quietly in the background.
   useEffect(() => {
     void load(0, true);
-  }, [load, version, searchRun]);
-
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return jobs.filter((j) => {
-      if (dateFilter && istDate(j.starts_at) !== dateFilter) return false;
-      if (!q) return true;
-      return `${j.title} ${j.description} ${employerLabel(j)}`.toLowerCase().includes(q);
-    });
-  }, [jobs, search, dateFilter]);
+  }, [load, searchRun]);
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  const firstVersion = useRef(true);
+  useEffect(() => {
+    if (firstVersion.current) {
+      firstVersion.current = false;
+      return;
+    }
+    void loadRef.current(0, true, true);
+  }, [version]);
 
   const profileIncomplete = !me?.worker?.locality_id || (me?.worker?.category_ids.length ?? 0) === 0;
-  const filtered = Boolean(localityId || categoryId || dateFilter || search.trim());
+  const filtered = Boolean(localityId || categoryId || dateFilter || when || duration || search.trim());
 
   function reset() {
     setLocalityId("");
     setCategoryId("");
     setDateFilter("");
+    setWhen("");
+    setDuration("");
     setSearch("");
+    setAppliedSearch("");
   }
 
   function understand(text: string) {
@@ -182,29 +230,37 @@ export function WorkerJobs() {
     setCategoryId(reading.categoryId);
     setLocalityId(reading.localityId);
     setDateFilter(reading.date);
+    setWhen("");
+    setDuration("");
     setSearch(reading.keywords);
-    setSearching(true); // hide the old list and show the loader until the new results arrive
+    setAppliedSearch(reading.keywords); // no debounce: the worker just confirmed
+    setSearching(true);
     setSearchRun((n) => n + 1);
     setReading(null);
   }
 
+  // On a phone the search tools come first so a worker can start looking straight away; the overview follows the jobs.
   return (
-    <>
-      <PageHeader
-        title="Find work"
-        subtitle={`${me?.profile.full_name ? `Hello, ${me.profile.full_name.split(" ")[0]}. ` : ""}Open jobs in Vadodara that are still looking for workers.`}
-      />
+    <div className="flex flex-col">
+      <div className="order-1">
+        <PageHeader
+          title="Find work"
+          subtitle={`${me?.profile.full_name ? `Hello, ${me.profile.full_name.split(" ")[0]}. ` : ""}Open jobs in Vadodara that are still looking for workers.`}
+        />
+      </div>
 
       {profileIncomplete && (
-        <Alert tone="warning" title="Finish your profile to apply" className="mb-5">
+        <Alert tone="warning" title="Finish your profile to apply" className="order-2 mb-5">
           Add your area and at least one kind of work you do.{" "}
           <Link to="/worker/profile" className="font-semibold underline">Complete your profile</Link>
         </Alert>
       )}
 
-      <WorkerSummary />
+      <div className="order-last lg:order-3">
+        <WorkerSummary />
+      </div>
 
-      <Card className="mb-6 border-l-4 border-l-terracotta bg-white">
+      <Card className="order-4 mb-6 border-l-4 border-l-terracotta bg-white">
         <h2 className="text-lg">Ask in your own words</h2>
         <p className="text-sm text-ink-soft">For example: “Show me event helper jobs near Alkapuri tomorrow.” Say it or type it, then check what I understood before searching.</p>
         <form
@@ -233,7 +289,7 @@ export function WorkerJobs() {
               <SelectField label="Type of work" value={reading.categoryId} onChange={(e) => setReading({ ...reading, categoryId: e.target.value })}>
                 <option value="">Any type of work</option>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name_en}</option>
+                  <option key={c.id} value={c.id}>{categoryLabel(c)}</option>
                 ))}
               </SelectField>
               <SelectField label="Locality" value={reading.localityId} onChange={(e) => setReading({ ...reading, localityId: e.target.value })}>
@@ -253,56 +309,72 @@ export function WorkerJobs() {
         )}
       </Card>
 
-      <h2 className="mb-3 text-xl sm:text-2xl">Open jobs</h2>
-      <form role="search" aria-label="Filter jobs" onSubmit={(e) => e.preventDefault()} className="mb-6 grid gap-4 rounded-xl border border-line bg-paper p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
-        <TextField label="Search" type="search" placeholder="e.g. sofa, painting" hint="Searches the jobs shown below." value={search} onChange={(e) => setSearch(e.target.value)} />
-        <SelectField label="Type of work" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-          <option value="">All types of work</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name_en}</option>
-          ))}
-        </SelectField>
-        <SelectField label="Locality" value={localityId} onChange={(e) => setLocalityId(e.target.value)}>
-          <option value="">All of Vadodara</option>
-          {localities.map((l) => (
-            <option key={l.id} value={l.id}>{l.name}{l.id === myLocality ? " (my area)" : ""}</option>
-          ))}
-        </SelectField>
-        <TextField label="Date" type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} hint="Empty = any date." />
-        <div className="flex items-end">
-          <Button variant="secondary" onClick={reset} disabled={!filtered} className="w-full">Clear filters</Button>
-        </div>
-      </form>
-
-      {(loading && jobs.length === 0) || searching ? (
-        <LoadingBlock label="Loading jobs…" />
-      ) : error && jobs.length === 0 ? (
-        <ErrorState error={error} onRetry={() => void load(0, true)} />
-      ) : visible.length === 0 ? (
-        <EmptyState
-          title={filtered ? "No jobs match your filters" : "No open jobs right now"}
-          action={filtered ? <Button variant="secondary" onClick={reset}>Show all jobs</Button> : undefined}
-        >
-          {filtered ? "Try a different type of work, widen the locality, or clear the date." : "New jobs appear here as employers post them. Check back soon."}
-        </EmptyState>
-      ) : (
-        <>
-          <p className="mb-3 text-sm font-semibold text-ink-soft" role="status">{visible.length} {visible.length === 1 ? "job" : "jobs"} shown</p>
-          <ul className="flex flex-col gap-4">
-            {visible.map((job) => (
-              <li key={job.id}>
-                <JobCard job={job} to={`/worker/jobs/${job.id}`} />
-              </li>
+      <div className="order-5">
+        <h2 className="mb-3 text-xl sm:text-2xl">Open jobs</h2>
+        <form role="search" aria-label="Filter jobs" onSubmit={(e) => e.preventDefault()} className="mb-6 grid gap-4 rounded-xl border border-line bg-paper p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div className="sm:col-span-2">
+            <TextField label="Search" type="search" placeholder="e.g. sofa, painting" hint="Searches every open job, not just the ones shown." value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <SelectField label="Type of work" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">All types of work</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{categoryLabel(c)}</option>
             ))}
-          </ul>
-          {error != null && <ErrorState error={error} />}
-          {hasMore && (
-            <div className="mt-6 flex justify-center">
-              <Button variant="secondary" loading={loadingMore} onClick={() => void load(jobs.length, false)}>Load more jobs</Button>
-            </div>
-          )}
-        </>
-      )}
-    </>
+          </SelectField>
+          <SelectField label="Locality" value={localityId} onChange={(e) => setLocalityId(e.target.value)}>
+            <option value="">All of Vadodara</option>
+            {localities.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}{l.id === myLocality ? " (my area)" : ""}</option>
+            ))}
+          </SelectField>
+          <SelectField label="When" value={dateFilter ? "" : when} onChange={(e) => { setWhen(e.target.value as When); setDateFilter(""); }} disabled={Boolean(dateFilter)} hint={dateFilter ? "A date is chosen." : undefined}>
+            <option value="">Any day</option>
+            {(Object.keys(WHEN_LABEL) as Exclude<When, "">[]).map((w) => (
+              <option key={w} value={w}>{WHEN_LABEL[w]}</option>
+            ))}
+          </SelectField>
+          <TextField label="Date" type="date" value={dateFilter} onChange={(e) => { setDateFilter(e.target.value); if (e.target.value) setWhen(""); }} hint="Empty = any date." />
+          <SelectField label="How long" value={duration} onChange={(e) => setDuration(e.target.value as Duration)}>
+            <option value="">Any length</option>
+            {(Object.keys(DURATION_LABEL) as Exclude<Duration, "">[]).map((d) => (
+              <option key={d} value={d}>{DURATION_LABEL[d]}</option>
+            ))}
+          </SelectField>
+          <div className="flex items-end">
+            <Button variant="secondary" onClick={reset} disabled={!filtered} className="w-full">Clear filters</Button>
+          </div>
+        </form>
+
+        {searching || (loading && jobs.length === 0) ? (
+          <LoadingBlock label="Loading jobs…" />
+        ) : error && jobs.length === 0 ? (
+          <ErrorState error={error} onRetry={() => void load(0, true)} />
+        ) : jobs.length === 0 ? (
+          <EmptyState
+            title={filtered ? "No jobs match your filters" : "No open jobs right now"}
+            action={filtered ? <Button variant="secondary" onClick={reset}>Show all jobs</Button> : undefined}
+          >
+            {filtered ? "Try a different type of work, widen the locality, or clear the date." : "New jobs appear here as employers post them. Check back soon."}
+          </EmptyState>
+        ) : (
+          <>
+            <p className="mb-3 text-sm font-semibold text-ink-soft" role="status">{jobs.length}{hasMore ? "+" : ""} {jobs.length === 1 && !hasMore ? "job" : "jobs"} shown</p>
+            <ul className="flex flex-col gap-4">
+              {jobs.map((job) => (
+                <li key={job.id}>
+                  <JobCard job={job} to={`/worker/jobs/${job.id}`} />
+                </li>
+              ))}
+            </ul>
+            {error != null && <ErrorState error={error} />}
+            {hasMore && (
+              <div className="mt-6 flex justify-center">
+                <Button variant="secondary" loading={loadingMore} onClick={() => void load(jobs.length, false)}>Load more jobs</Button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
