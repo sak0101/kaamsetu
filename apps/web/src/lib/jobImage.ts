@@ -12,12 +12,12 @@ import { wordRe } from "./voiceQuery";
 /** One picture per type of work (the work category slug is the key). */
 export const FILE_BY_SLUG: Record<string, string> = {
   event_help: "event-generic.svg",
-  loading_unloading: "cat-loading.svg",
+  loading_unloading: "cat-loading.jpg",
   furniture_shifting: "cat-furniture.svg",
-  cleaning: "cat-cleaning.svg",
-  construction_helper: "cat-construction.svg",
-  painting_helper: "cat-painting.svg",
-  gardening: "cat-gardening.svg",
+  cleaning: "cat-cleaning.jpg",
+  construction_helper: "cat-construction.jpg",
+  painting_helper: "cat-painting.jpg",
+  gardening: "cat-gardening.jpg",
   packing: "cat-packing.svg",
 };
 

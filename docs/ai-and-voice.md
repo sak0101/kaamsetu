@@ -49,4 +49,9 @@ npm run e2e -w @kaamsetu/web                                       # real Edge b
 
 ## Pictures
 
-One consistent set of original SVG illustrations (`apps/web/public/images`): eight types of work and five kinds of event (wedding, catering, exhibition, religious, corporate) plus a general event picture. The event kind is chosen from the job's own title and description by keyword rules (`lib/jobImage.ts`, multilingual) only for "Event help" jobs; there is no AI call and no network request. A missing file falls back to a coloured tile.
+Job cards and category cards use local files in `apps/web/public/images` (nothing is hotlinked), one per type of work:
+
+- **Five real photographs** (640x360, 16:9 JPEG, Unsplash License): loading & unloading, cleaning, construction helpers, painting helpers and gardening (`cat-*.jpg`). Photographer, source page and licence for each are in `public/images/credits.json` (shown on the Credits page) and `docs/image-attributions.md`.
+- **Three original SVG illustrations**: furniture shifting (`cat-furniture.svg`), packing (`cat-packing.svg`) and "Event help", which has a general picture plus five kinds of event (wedding, catering, exhibition, religious, corporate). No suitable, verifiable free photograph has been found for these yet, so the illustrations stay until one is.
+
+The event kind is chosen from the job's own title and description by keyword rules (`lib/jobImage.ts`, multilingual) only for "Event help" jobs; there is no AI call and no network request. A missing file falls back to a coloured tile.

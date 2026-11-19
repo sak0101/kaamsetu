@@ -56,9 +56,16 @@ export function createContactRouter(mailer: ContactMailer | null): Router {
     try {
       await mailer.send({ name: body.name, email: body.email, message: body.message });
     } catch (err) {
-      // Log the error kind only: SMTP errors can echo addresses or server details.
-      console.error(`[kaamsetu] contact mail failed: ${(err as { code?: string }).code ?? (err as Error)?.name ?? "unknown"}`);
-      throw new ApiError(502, "contact_failed", "We couldn't send your message. Please email us directly.");
+      // Log connection metadata only (never messages, names, addresses, credentials or server response text).
+      const e = (err ?? {}) as { code?: unknown; syscall?: unknown; address?: unknown; port?: unknown; command?: unknown; responseCode?: unknown; name?: unknown };
+      const pick = (v: unknown) => (typeof v === "string" || typeof v === "number" ? String(v).slice(0, 60) : "-");
+      console.error(
+        `[kaamsetu] contact mail failed: code=${pick(e.code ?? e.name)} syscall=${pick(e.syscall)} address=${pick(e.address)} port=${pick(e.port)} command=${pick(e.command)} responseCode=${pick(e.responseCode)}`,
+      );
+      const code = typeof e.code === "string" ? e.code : "";
+      // 504: the mail server never answered in time. 503: could not connect/negotiate. 502: it answered and refused.
+      const status = /TIMEDOUT|TIMEOUT/.test(code) ? 504 : /^(ESOCKET|ECONNECTION|ECONNREFUSED|ECONNRESET|EDNS|ENOTFOUND|EHOSTUNREACH|ENETUNREACH)$/.test(code) ? 503 : 502;
+      throw new ApiError(status, "contact_failed", "We couldn't send your message. Please email us directly.");
     }
     res.status(202).json({ ok: true });
   });

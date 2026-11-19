@@ -134,6 +134,23 @@ describe("POST /api/contact", () => {
     expect(logged).not.toMatch(/Asha|asha@example|shop for helpers|secret-pass/);
   });
 
+  it.each([
+    ["ESOCKET", 503],
+    ["ETIMEDOUT", 504],
+    ["ECONNECTION", 503],
+  ])("maps SMTP %s to %i and logs only connection metadata", async (code, status) => {
+    send.mockRejectedValue(Object.assign(new Error("boom secret-pass"), { code, syscall: "connect", address: "1.2.3.4", port: 465 }));
+    await start({ send });
+    const res = await post(valid);
+    expect(res.status).toBe(status);
+    expect(JSON.stringify(await res.json())).toContain("contact_failed");
+    const logged = logs.flatMap((l) => l.mock.calls.flat()).join(" ");
+    expect(logged).toContain(`code=${code}`);
+    expect(logged).toContain("syscall=connect");
+    expect(logged).toContain("port=465");
+    expect(logged).not.toMatch(/secret-pass|Asha|asha@example/);
+  });
+
   it("rejects an oversized body", async () => {
     await start({ send });
     const res = await post({ ...valid, message: "x".repeat(20_000) });

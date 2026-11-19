@@ -51,7 +51,7 @@ describe("image assets", () => {
   it("any photograph that is ever added must be credited under a reuse-friendly licence, and every credit needs its file", () => {
     const photos = fs.readdirSync(imagesDir).filter((f) => /\.(jpg|jpeg|png)$/i.test(f));
     expect(photos.sort()).toEqual(credits.map((c) => c.file).sort());
-    const allowed = /^(CC0|CC BY|CC BY-SA|Public domain)/i;
+    const allowed = /^(Unsplash License|Pexels License|CC0|CC BY|CC BY-SA|Public domain)/i;
     for (const c of credits) {
       expect(c.license, c.file).toMatch(allowed);
       expect(c.license, c.file).not.toMatch(/\bNC\b|\bND\b/);
@@ -127,7 +127,7 @@ describe("CategoryImage", () => {
     const img = container.querySelector("img")!;
     expect(img.getAttribute("alt")).toBe("");
     expect(img.getAttribute("loading")).toBe("lazy");
-    expect(img.getAttribute("src")).toBe("/images/cat-loading.svg");
+    expect(img.getAttribute("src")).toBe("/images/cat-loading.jpg");
   });
 
   it("falls back to a coloured tile with the initial when a picture fails to load", () => {
