@@ -1,6 +1,6 @@
 # KaamSetu API (Express) — Phase 1
 
-All routes are under `/api`, return JSON, and (except `/api/health`) require `Authorization: Bearer <Supabase access token>`.
+All routes are under `/api`, return JSON, and (except the public routes `/api/health`, `/api/public-config` and `/api/contact`) require `Authorization: Bearer <Supabase access token>`.
 Database contract: [database.md](database.md). Nothing here is deployed.
 
 ## Security model
@@ -22,6 +22,7 @@ Database contract: [database.md](database.md). Nothing here is deployed.
 |---|---|---|
 | `GET /api/health` | public | — |
 | `GET /api/public-config` | public | none: returns `{ supabaseUrl, supabaseAnonKey }` (browser-safe values only) so the SPA can create its Supabase auth client at runtime; the service-role key is never included |
+| `POST /api/contact` | public | none: emails `{ name, email, message }` to `CONTACT_TO` (default `info@kaamsetu.tech`) over SMTP. Independent of Supabase (works without it). Strict schema + hidden `website` honeypot (a filled honeypot returns 202 and sends nothing); 5 messages per client and 60 in total per hour (429 `contact_rate_limited`); 8 KB body limit. 202 `{ ok: true }`; 503 `contact_not_configured` when SMTP is not set; 502 `contact_failed` when sending fails. From is the authenticated mailbox, Reply-To is the visitor. Names, addresses and message text are never logged |
 | `GET /api/me` | any | reads `profiles`, `worker_profiles`, `worker_categories` |
 | `PUT /api/me/profile` | any | `update_profile` |
 | `PUT /api/me/worker-profile` | worker | `save_worker_profile` (bio, years, locality, categories, skills ≤8, availability note) |

@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth";
 import { NotificationsProvider, useNotifications } from "../lib/notifications";
 import { ReferenceProvider } from "../lib/reference";
 import type { Role } from "../lib/types";
+import { CONTACT_EMAIL, ContactForm } from "./ContactForm";
 import { Button, ButtonLink, LoadingBlock } from "./ui";
 
 export const homeFor = (role: Role) => (role === "worker" ? "/worker" : "/employer");
@@ -24,8 +25,6 @@ const NAV: Record<Role, { to: string; label: string; end?: boolean }[]> = {
     { to: "/employer/profile", label: "Profile" },
   ],
 };
-
-export const CONTACT_EMAIL = "info@kaamsetu.tech";
 
 function Brand({ to }: { to: string }) {
   return (
@@ -210,7 +209,7 @@ export function PublicShell() {
         <Outlet />
       </main>
       <footer className="on-dark bg-ink text-white">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.6fr]">
           <div>
             <p className="text-xl font-extrabold">
               <span className="border-b-4 border-terracotta pb-0.5">{APP_NAME}</span>
@@ -226,12 +225,16 @@ export function PublicShell() {
               <li><Link to="/credits" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Photo credits</Link></li>
             </ul>
           </nav>
-          <section aria-labelledby="contact-h">
+          <section aria-labelledby="contact-h" className="sm:col-span-2 lg:col-span-1">
             <h2 id="contact-h" className="text-base font-bold text-marigold">Contact</h2>
-            <p className="mt-3 text-white/85">Questions or feedback? Write to us:</p>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="mt-1 inline-flex min-h-11 items-center break-all font-semibold text-white underline decoration-terracotta decoration-2 underline-offset-4 hover:text-marigold">
-              {CONTACT_EMAIL}
-            </a>
+            <p className="mt-3 text-white/85">
+              Questions or feedback? Send us a message, or write to{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="break-all font-semibold text-white underline decoration-terracotta decoration-2 underline-offset-4 hover:text-marigold">
+                {CONTACT_EMAIL}
+              </a>
+              .
+            </p>
+            <ContactForm />
           </section>
         </div>
         <div className="border-t border-white/15 px-4 py-4 text-center text-sm text-white/75">

@@ -1,7 +1,8 @@
 import path from "node:path";
 import { createApp } from "./app";
 import { createAiService } from "./ai";
-import { loadAiConfig, loadSupabaseConfig, resolvePort } from "./config";
+import { loadAiConfig, loadMailConfig, loadSupabaseConfig, resolvePort } from "./config";
+import { createContactMailer, type ContactMailer } from "./mailer";
 import { createSupabaseDeps } from "./supabase";
 import type { Deps } from "./types";
 
@@ -32,9 +33,20 @@ try {
   console.warn(`[kaamsetu] Data API disabled: ${(err as Error).message}`);
 }
 
+// The contact form is optional and independent of Supabase. Settings are read once; values are never logged.
+let mailer: ContactMailer | null = null;
+try {
+  const mailConfig = loadMailConfig(process.env);
+  mailer = mailConfig ? createContactMailer(mailConfig) : null;
+  console.log(mailer ? "[kaamsetu] Contact form enabled" : "[kaamsetu] Contact form disabled: set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS to enable it");
+} catch (err) {
+  console.warn(`[kaamsetu] Contact form disabled: ${(err as Error).message}`);
+}
+const trustProxy = Number(process.env.TRUST_PROXY_HOPS) || undefined;
+
 // In the production bundle, server.js sits next to public/. In dev (tsx) this
 // directory does not exist and static serving is skipped; Vite serves the SPA.
-const app = createApp({ staticDir: path.resolve(__dirname, "public"), deps, publicConfig });
+const app = createApp({ staticDir: path.resolve(__dirname, "public"), deps, publicConfig, mailer, trustProxy });
 
 // GoDaddy Node.js Hosting requires an explicit IPv4 wildcard bind on process.env.PORT.
 const HOST = "0.0.0.0";

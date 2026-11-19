@@ -37,12 +37,14 @@ describe("landing page", () => {
     expect(container.textContent ?? "").not.toMatch(/hackathon|godaddy/i);
   });
 
-  it("shows a Contact section in the footer with a clickable email link", async () => {
+  it("shows a Contact section in the footer with the email address as a clickable fallback", async () => {
     installFetch({ ...baseRoutes("worker") });
     renderApp("/");
     const footer = (await screen.findByRole("heading", { name: "Contact" })).closest("footer") as HTMLElement;
     expect(footer).not.toBeNull();
-    expect(within(footer).getByRole("link", { name: "info@kaamsetu.tech" })).toHaveAttribute("href", "mailto:info@kaamsetu.tech");
+    const links = within(footer).getAllByRole("link", { name: "info@kaamsetu.tech" });
+    expect(links.length).toBeGreaterThan(0);
+    for (const l of links) expect(l).toHaveAttribute("href", "mailto:info@kaamsetu.tech");
   });
 
   it("offers a dashboard link when already signed in", async () => {
