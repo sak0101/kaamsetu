@@ -272,7 +272,7 @@ var contactBody2 = import_zod2.z.object({
   /** Honeypot: hidden from people. Bots fill it in. */
   website: import_zod2.z.string().max(200).optional()
 }).strict();
-function createContactRouter(mailer2) {
+function createContactRouter(mailer2, opts = {}) {
   const r = (0, import_express.Router)();
   r.use(import_express.default.json({ limit: "8kb" }));
   const perClient = createRateLimiter({
@@ -291,6 +291,12 @@ function createContactRouter(mailer2) {
     const body = parse(contactBody2, req.body);
     if (body.website && body.website.trim() !== "") {
       res.status(202).json({ ok: true });
+      return;
+    }
+    if (opts.demo) {
+      perClient.hit(req.ip ?? "unknown");
+      everyone.hit("all");
+      res.status(202).json({ ok: true, demo: true });
       return;
     }
     if (!mailer2) {
@@ -695,7 +701,7 @@ function createApp(options = {}) {
       res.json({ supabaseUrl: publicConfig2.supabaseUrl, supabaseAnonKey: publicConfig2.supabaseAnonKey });
     });
   }
-  app2.use("/api/contact", createContactRouter(options.mailer ?? null));
+  app2.use("/api/contact", createContactRouter(options.mailer ?? null, { demo: options.contactDemo === true }));
   if (options.deps) {
     app2.use("/api", createApiRouter(options.deps));
   }
@@ -1402,8 +1408,10 @@ try {
 } catch (err) {
   console.warn(`[kaamsetu] Contact form disabled: ${err.message}`);
 }
+var contactDemo = process.env.CONTACT_DEMO_MODE === "true";
+if (contactDemo) console.warn("[kaamsetu] CONTACT_DEMO_MODE is on: contact form email delivery is simulated, nothing is sent");
 var trustProxy = Number(process.env.TRUST_PROXY_HOPS) || void 0;
-var app = createApp({ staticDir: import_node_path2.default.resolve(__dirname, "public"), deps, publicConfig, mailer, trustProxy });
+var app = createApp({ staticDir: import_node_path2.default.resolve(__dirname, "public"), deps, publicConfig, mailer, contactDemo, trustProxy });
 var HOST = "0.0.0.0";
 var server = app.listen(port, HOST, () => {
   console.log(`[kaamsetu] Listening on ${HOST}, port ${port} (NODE_ENV=${process.env.NODE_ENV ?? "unset"})`);
