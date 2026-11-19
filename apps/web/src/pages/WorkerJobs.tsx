@@ -190,7 +190,10 @@ export function WorkerJobs() {
 
   return (
     <>
-      <PageHeader title="Find work" subtitle="Open jobs in Vadodara that are still looking for workers." />
+      <PageHeader
+        title="Find work"
+        subtitle={`${me?.profile.full_name ? `Hello, ${me.profile.full_name.split(" ")[0]}. ` : ""}Open jobs in Vadodara that are still looking for workers.`}
+      />
 
       {profileIncomplete && (
         <Alert tone="warning" title="Finish your profile to apply" className="mb-5">
@@ -201,7 +204,7 @@ export function WorkerJobs() {
 
       <WorkerSummary />
 
-      <Card className="mb-6">
+      <Card className="mb-6 border-l-4 border-l-terracotta bg-white">
         <h2 className="text-lg">Ask in your own words</h2>
         <p className="text-sm text-ink-soft">For example: “Show me event helper jobs near Alkapuri tomorrow.” Say it or type it, then check what I understood before searching.</p>
         <form
@@ -250,7 +253,8 @@ export function WorkerJobs() {
         )}
       </Card>
 
-      <form role="search" aria-label="Filter jobs" onSubmit={(e) => e.preventDefault()} className="mb-6 grid gap-4 rounded-xl border border-line bg-paper p-4 sm:grid-cols-2 lg:grid-cols-5">
+      <h2 className="mb-3 text-xl sm:text-2xl">Open jobs</h2>
+      <form role="search" aria-label="Filter jobs" onSubmit={(e) => e.preventDefault()} className="mb-6 grid gap-4 rounded-xl border border-line bg-paper p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
         <TextField label="Search" type="search" placeholder="e.g. sofa, painting" hint="Searches the jobs shown below." value={search} onChange={(e) => setSearch(e.target.value)} />
         <SelectField label="Type of work" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
           <option value="">All types of work</option>
@@ -283,7 +287,7 @@ export function WorkerJobs() {
         </EmptyState>
       ) : (
         <>
-          <p className="sr-only" role="status">{visible.length} jobs shown</p>
+          <p className="mb-3 text-sm font-semibold text-ink-soft" role="status">{visible.length} {visible.length === 1 ? "job" : "jobs"} shown</p>
           <ul className="flex flex-col gap-4">
             {visible.map((job) => (
               <li key={job.id}>

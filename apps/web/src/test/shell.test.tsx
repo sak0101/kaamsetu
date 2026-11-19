@@ -260,7 +260,7 @@ describe("architecture guardrails", () => {
   it("uses only the endpoints documented in docs/api.md", () => {
     const documented = new Set([
       "/public-config", "/me", "/me/profile", "/me/worker-profile", "/categories", "/localities", "/jobs", "/employer/jobs", "/me/applications",
-      "/me/bookings", "/notifications", "/notifications/read", "/me/contact", "/ai/status", "/ai/job-draft",
+      "/me/bookings", "/notifications", "/notifications/read", "/me/contact", "/ai/status", "/ai/job-draft", "/contact",
     ]);
     const dynamic = [/^\/jobs\/\$\{[^}]+\}$/, /^\/jobs\/\$\{[^}]+\}\/(cancel|applications|applicants)$/, /^\/applications\/\$\{[^}]+\}\/(withdraw|accept|reject)$/, /^\/bookings\/\$\{[^}]+\}\/(cancel|contact)$/];
     const used = [...read(path.join(srcDir, "lib/api.ts")).matchAll(/request<[^>]*(?:<[^>]*>[^>]*)*>\(\s*"[A-Z]+",\s*[`"]([^`"]+)[`"]/g)].map((m) => m[1]!);

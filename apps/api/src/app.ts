@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import express from "express";
 import { APP_NAME } from "@kaamsetu/shared";
+import { createContactRouter } from "./contact";
 import { errorHandler } from "./errors";
+import type { ContactMailer } from "./mailer";
 import { createApiRouter } from "./routes";
 import type { Deps } from "./types";
 
@@ -13,11 +15,16 @@ export interface AppOptions {
   deps?: Deps;
   /** Browser-safe Supabase settings (URL + anon key ONLY), served at runtime so nothing is baked into the build. */
   publicConfig?: { supabaseUrl: string; supabaseAnonKey: string };
+  /** SMTP-backed contact form sender. Null/omitted: POST /api/contact answers 503 contact_not_configured. */
+  mailer?: ContactMailer | null;
+  /** Reverse-proxy hops to trust for req.ip (per-client rate limits). Leave unset unless verified. */
+  trustProxy?: number;
 }
 
 export function createApp(options: AppOptions = {}) {
   const app = express();
   app.disable("x-powered-by");
+  if (options.trustProxy) app.set("trust proxy", options.trustProxy);
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, app: APP_NAME });
@@ -31,6 +38,9 @@ export function createApp(options: AppOptions = {}) {
       res.json({ supabaseUrl: publicConfig.supabaseUrl, supabaseAnonKey: publicConfig.supabaseAnonKey });
     });
   }
+
+  // Public and independent of Supabase, so it works even when the data API is not configured.
+  app.use("/api/contact", createContactRouter(options.mailer ?? null));
 
   if (options.deps) {
     app.use("/api", createApiRouter(options.deps));

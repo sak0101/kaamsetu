@@ -9,6 +9,8 @@ export const FILE_BY_SLUG: Record<string, string> = {
   construction_helper: "cat-construction.jpg",
   painting_helper: "cat-painting.jpg",
   gardening: "cat-gardening.jpg",
+  // No suitable licensed photo, so this one is an in-repo illustration in the brand palette (no credit needed).
+  packing: "cat-packing.svg",
 };
 
 /** Brand-coloured fallback tile (used when a photo is missing), so there is never a broken-image icon. */
@@ -37,5 +39,11 @@ export function CategoryImage({ slug, name, className = "" }: { slug: string | u
       </div>
     );
   }
-  return <img src={`/images/${file}`} alt="" width={320} height={220} loading="lazy" decoding="async" onError={() => setFailed(true)} className={`object-cover ${className}`} />;
+  return (
+    <div className={`relative overflow-hidden bg-line ${className}`}>
+      <img src={`/images/${file}`} alt="" width={320} height={220} loading="lazy" decoding="async" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+      {/* A soft indigo wash at the bottom edge ties photos of different styles together. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink/35 to-transparent" />
+    </div>
+  );
 }

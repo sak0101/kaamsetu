@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth";
 import { NotificationsProvider, useNotifications } from "../lib/notifications";
 import { ReferenceProvider } from "../lib/reference";
 import type { Role } from "../lib/types";
+import { CONTACT_EMAIL, ContactForm } from "./ContactForm";
 import { Button, ButtonLink, LoadingBlock } from "./ui";
 
 export const homeFor = (role: Role) => (role === "worker" ? "/worker" : "/employer");
@@ -207,8 +208,38 @@ export function PublicShell() {
       <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
         <Outlet />
       </main>
-      <footer className="border-t border-line px-4 py-6 text-center text-sm text-ink-soft">
-        {APP_NAME} · Vadodara, Gujarat · Built for the GoDaddy Innovation Hackathon 2026 · <Link to="/credits" className="underline">Photo credits</Link>
+      <footer className="on-dark bg-ink text-white">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.6fr]">
+          <div>
+            <p className="text-xl font-extrabold">
+              <span className="border-b-4 border-terracotta pb-0.5">{APP_NAME}</span>
+            </p>
+            <p className="mt-3 max-w-xs text-white/85">Short-term work, close to home. Connecting people who need a few hands with nearby workers in Vadodara, Gujarat.</p>
+          </div>
+          <nav aria-label="Footer">
+            <h2 className="text-base font-bold text-marigold">Explore</h2>
+            <ul className="mt-3 flex flex-col gap-1">
+              <li><Link to="/signup?role=employer" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Hire workers</Link></li>
+              <li><Link to="/signup?role=worker" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Find work</Link></li>
+              <li><Link to="/login" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Log in</Link></li>
+              <li><Link to="/credits" className="inline-flex min-h-9 items-center underline-offset-2 hover:underline">Photo credits</Link></li>
+            </ul>
+          </nav>
+          <section aria-labelledby="contact-h" className="sm:col-span-2 lg:col-span-1">
+            <h2 id="contact-h" className="text-base font-bold text-marigold">Contact</h2>
+            <p className="mt-3 text-white/85">
+              Questions or feedback? Send us a message, or write to{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="break-all font-semibold text-white underline decoration-terracotta decoration-2 underline-offset-4 hover:text-marigold">
+                {CONTACT_EMAIL}
+              </a>
+              .
+            </p>
+            <ContactForm />
+          </section>
+        </div>
+        <div className="border-t border-white/15 px-4 py-4 text-center text-sm text-white/75">
+          © {new Date().getFullYear()} {APP_NAME} · Vadodara, Gujarat · We never ask for Aadhaar or ID numbers.
+        </div>
       </footer>
     </div>
   );

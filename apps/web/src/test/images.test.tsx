@@ -63,7 +63,7 @@ describe("photo credits page", () => {
     installFetch({ ...baseRoutes("worker"), "GET /images/credits.json": { json: credits } });
     renderApp("/credits");
     expect(await screen.findByRole("heading", { level: 1, name: "Photo credits" })).toBeInTheDocument();
-    const list = await screen.findByRole("list");
+    const list = await within(screen.getByRole("main")).findByRole("list"); // the footer has its own link list
     expect(within(list).getAllByRole("listitem")).toHaveLength(credits.length);
     const first = credits[0]!;
     expect(within(list).getByText(first.title)).toBeInTheDocument();

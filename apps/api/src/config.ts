@@ -87,3 +87,44 @@ export function loadAiConfig(env: NodeJS.ProcessEnv): AiConfig | null {
   }
   return { apiKey, model: env.ANTHROPIC_MODEL?.trim() || DEFAULT_AI_MODEL, baseURL };
 }
+
+export interface MailConfig {
+  host: string;
+  port: number;
+  /** The authenticated mailbox. Also used as the From address. */
+  user: string;
+  /** SECRET. Server-side only; never logged or sent to the browser. */
+  pass: string;
+  /** Where contact-form messages are delivered. */
+  to: string;
+}
+
+/** Default recipient for contact-form messages (a public address, not a secret). */
+export const DEFAULT_CONTACT_TO = "info@kaamsetu.tech";
+
+const EMAIL_RE = /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/;
+
+/**
+ * The contact form is optional: without SMTP settings POST /api/contact answers 503
+ * `contact_not_configured` and the page falls back to showing the email address.
+ * Returns null when any of SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS is unset.
+ * Error messages name variables, never values.
+ */
+export function loadMailConfig(env: NodeJS.ProcessEnv): MailConfig | null {
+  const host = env.SMTP_HOST?.trim();
+  const rawPort = env.SMTP_PORT?.trim();
+  const user = env.SMTP_USER?.trim();
+  const pass = env.SMTP_PASS;
+  if (!host || !rawPort || !user || !pass) return null;
+
+  const port = Number(rawPort);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("SMTP_PORT must be an integer between 1 and 65535.");
+  }
+  if (!EMAIL_RE.test(user)) {
+    throw new Error("SMTP_USER must be the full mailbox address (it is used as the From address).");
+  }
+  const to = env.CONTACT_TO?.trim() || DEFAULT_CONTACT_TO;
+  if (!EMAIL_RE.test(to)) throw new Error("CONTACT_TO is not a valid email address.");
+  return { host, port, user, pass, to };
+}

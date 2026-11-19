@@ -41,6 +41,24 @@ GoDaddy runs `npm run build` on the server, but the frontend is compiled **befor
 - Realtime goes directly from the browser to Supabase. The Node process holds no long-lived connections.
 - The Supabase URL and anon key reach the browser at runtime from the server's environment (planned `/api/public-config`), so they are set once in GoDaddy's env settings and are not baked into the build.
 
+## Contact form email (SMTP)
+
+The footer contact form posts to `POST /api/contact`, which sends the message with `nodemailer` (the only mail dependency; it is in `apps/api` `dependencies`, so it is listed in the generated manifest and installed by GoDaddy's `npm install`).
+
+Set these in GoDaddy's environment-variable settings (never in the ZIP or Git):
+
+| Variable | Notes |
+|---|---|
+| `SMTP_HOST`, `SMTP_PORT` | From your mail provider's SMTP settings. Port 465 = implicit TLS; other ports require STARTTLS. |
+| `SMTP_USER` | The full mailbox address. Used for authentication **and** as the From address. |
+| `SMTP_PASS` | The mailbox password. Secret: never logged or returned by the API. |
+| `CONTACT_TO` | Optional recipient; defaults to `info@kaamsetu.tech`. |
+| `TRUST_PROXY_HOPS` | Optional. Only set after confirming how GoDaddy forwards client IPs; until then per-client limits see the proxy address, and the global cap (60/hour) is the backstop. |
+
+If any of the four SMTP variables is missing the form is disabled safely: the API answers `503 contact_not_configured` and the page tells visitors to email `info@kaamsetu.tech`. Startup logs say "Contact form enabled/disabled" and never print values.
+
+**Not verified:** whether GoDaddy's Node.js hosting allows outbound SMTP on the chosen port, and that the mailbox accepts authenticated SMTP from the server. Test with a real submission after deploying; if outbound SMTP is blocked, switch the sender to an HTTPS email API (the route and tests stay the same; only `mailer.ts` changes). Messages are not stored: if sending fails the visitor is shown the fallback address.
+
 ## Not yet verified
 
 Hello-world phase verifies the ZIP locally only. Nothing has been uploaded to GoDaddy. Still to confirm on the real platform: how env vars are entered, what HTTPS/domain steps are needed, whether outbound SMTP to Titan works, and the app-root/entry-point settings.

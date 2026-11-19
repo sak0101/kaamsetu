@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220" role="img" aria-hidden="true">
+  <rect width="320" height="220" fill="#EDE5D5"/>
+  <rect y="168" width="320" height="52" fill="#D8CCB6"/>
+  <!-- large box -->
+  <g>
+    <rect x="70" y="92" width="130" height="86" fill="#D9A441"/>
+    <rect x="70" y="92" width="130" height="16" fill="#C4912F"/>
+    <rect x="125" y="92" width="22" height="86" fill="#B85C2E" opacity="0.85"/>
+    <rect x="70" y="92" width="130" height="86" fill="none" stroke="#243B53" stroke-width="3"/>
+  </g>
+  <!-- small box on top -->
+  <g>
+    <rect x="96" y="52" width="78" height="40" fill="#D97745"/>
+    <rect x="96" y="52" width="78" height="10" fill="#B85C2E"/>
+    <rect x="96" y="52" width="78" height="40" fill="none" stroke="#243B53" stroke-width="3"/>
+  </g>
+  <!-- second stack -->
+  <g>
+    <rect x="212" y="120" width="62" height="58" fill="#243B53"/>
+    <rect x="212" y="120" width="62" height="10" fill="#486581"/>
+    <rect x="236" y="120" width="14" height="58" fill="#D9A441"/>
+    <rect x="212" y="120" width="62" height="58" fill="none" stroke="#243B53" stroke-width="3"/>
+  </g>
+  <!-- tape roll -->
+  <circle cx="44" cy="154" r="20" fill="#FBF8F1" stroke="#243B53" stroke-width="3"/>
+  <circle cx="44" cy="154" r="8" fill="#EDE5D5" stroke="#243B53" stroke-width="3"/>
+</svg>
